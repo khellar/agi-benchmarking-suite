@@ -1,0 +1,5 @@
+blank_issues_enabled: true
+contact_links:
+  - name: How registration works
+    url: https://github.com/khellar/agi-benchmarking-suite/blob/main/docs/REGISTRY.md
+    about: What the registry checks, and how benchmarks and results appear on the site.

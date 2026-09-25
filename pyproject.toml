@@ -1,0 +1,62 @@
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "omegaeval"
+dynamic = ["version"]
+description = "One harness that every benchmark sits behind, for OmegaClaw and any other agent, with a cognition console and a citable run history"
+readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE"]
+requires-python = ">=3.11"
+dependencies = ["websockets>=13"]
+keywords = ["benchmark", "evaluation", "agents", "llm", "omegaclaw", "agi"]
+classifiers = [
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Operating System :: POSIX",
+    "Operating System :: MacOS",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+
+[project.urls]
+Homepage = "https://github.com/khellar/agi-benchmarking-suite"
+Documentation = "https://github.com/khellar/agi-benchmarking-suite/tree/main/docs"
+Repository = "https://github.com/khellar/agi-benchmarking-suite"
+Issues = "https://github.com/khellar/agi-benchmarking-suite/issues"
+Demo = "https://khellar.github.io/agi-benchmarking-suite/"
+
+[project.optional-dependencies]
+test = ["pytest>=8"]
+
+[project.scripts]
+omegaeval = "omegaeval.cli:main"
+
+[project.entry-points."omegaeval.environments"]
+keydoor = "omegaeval.envs.keydoor:KeyDoor"
+
+[tool.setuptools.dynamic]
+version = { attr = "omegaeval.__version__" }
+
+[tool.setuptools.packages.find]
+include = ["omegaeval*"]
+
+[tool.setuptools.package-data]
+omegaeval = ["console/*.html"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 120
+target-version = "py311"
+extend-exclude = ["site", "runs"]
+
+[tool.ruff.lint]
+select = ["F", "E9"]
+
+[tool.coverage.run]
+source = ["omegaeval"]

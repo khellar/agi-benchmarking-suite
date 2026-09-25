@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>agi-benchmarking-suite</title>
+<meta name="description" content="One harness that every benchmark sits behind, for OmegaClaw agents and hives: a cognition console, a citable run history, and a registry of benchmarks and verified results.">
+<link rel="stylesheet" href="site.css">
+</head>
+<body>
+<header class="top"><div class="in">
+  <a class="brand" href="./"><span class="mark" aria-hidden="true"></span>agi-benchmarking-suite</a>
+  <nav class="links" aria-label="Site">
+    <a href="./" aria-current="page">Home</a>
+    <a href="console/">Console</a>
+    <a href="registry.html">Registry</a>
+    <a href="{{repository}}/tree/main/docs">Docs</a>
+    <a href="{{repository}}">GitHub</a>
+  </nav>
+</div></header>
+<main>
+  <h1>One harness for every benchmark</h1>
+  <p class="lead"><code>omegaeval</code> plays benchmarks such as HLE, ARC-AGI-3 or FreeCiv through an OmegaClaw agent's own chat channel. It records what the agent saw, thought, remembered and did, and keeps an append-only history you can cite. It answers one question: did this change to the agent make it better, worse, or both, and in which respects.</p>
+  <div class="btns">
+    <a class="btn primary" href="console/">Open the console demo</a>
+    <a class="btn" href="registry.html">Browse the registry</a>
+    <a class="btn" href="{{repository}}/blob/main/docs/GUIDE.md">Read the guide</a>
+  </div>
+
+  <div class="grid">
+    <div class="card"><h3>See cognition step by step</h3><p>The console shows every loop turn of an episode: the context sent to the model, NAL and PLN inference, memory writes, actions and errors, beside what the agent saw.</p></div>
+    <div class="card"><h3>Plug in any benchmark</h3><p>A question set, a memory test or a live game loads from a data file, a Python file or a package, and is named the way people say it: hle, arc-agi-3, freeciv.</p></div>
+    <div class="card"><h3>Keep results you can cite</h3><p>Every episode is sealed with checksums, replays exactly, and freezes into a release. A registered release is re-verified from its files before its numbers are shown.</p></div>
+  </div>
+
+  <h2>Try it</h2>
+  <pre><code>pip install git+{{repository}}
+omegaeval baseline random qa-sample --seeds 1-10
+omegaeval baseline oracle qa-sample --seeds 1-10
+omegaeval export qa-sample --html report.html</code></pre>
+  <p class="sub">The two reference agents need no model and no server. <a href="{{repository}}#connect-an-agent">Connect an OmegaClaw agent</a> when you are ready.</p>
+
+  <h2>Register a benchmark or your results</h2>
+  <p>Anyone with a GitHub account can register. Fill in a form, and a pull request is opened for you once the checks pass. Registered benchmarks load with one command, <code>omegaeval add &lt;id&gt;</code>.</p>
+  <ol class="steps">
+    <li><strong>Fill in the form.</strong> A benchmark needs its id, a description and the config block that loads it. Results need a release bundle made by <code>omegaeval bundle</code>, hosted at an https address.</li>
+    <li><strong>The checks run.</strong> The entry is validated, and a result's bundle is downloaded and verified checksum by checksum. Problems come back as a comment on your issue.</li>
+    <li><strong>A maintainer merges.</strong> The site rebuilds, and the entry appears in the registry with its numbers recomputed from the bundle.</li>
+  </ol>
+  <div class="btns">
+    <a class="btn primary" href="{{repository}}/issues/new?template=register-benchmark.yml">Register a benchmark</a>
+    <a class="btn" href="{{repository}}/issues/new?template=register-results.yml">Register results</a>
+    <a class="btn" href="{{repository}}/blob/main/docs/REGISTRY.md">How registration works</a>
+  </div>
+</main>
+<footer>omegaeval {{version}} · built {{built}} · <a href="{{repository}}">source on GitHub</a></footer>
+</body>
+</html>

@@ -1,0 +1,18 @@
+id = "hle"
+label = "HLE"
+name = "Humanity's Last Exam (text-only)"
+kind = "qa"
+description = "Expert-written questions across many subjects, answered in free text or by option letter and graded by a judge model. Questions with images are skipped, because a chat channel carries text."
+homepage = "https://lastexam.ai"
+maintainers = ["khellar"]
+scoring = "judge"
+tags = ["reasoning", "knowledge", "exam"]
+config = '''
+[environments.hle]
+adapter = "omegaeval.envs.qa:QADataset"
+
+[environments.hle.options]
+path = "/data/hle.jsonl"
+judge_all = true
+allow_tools = ["send", "remember", "query", "pin", "episodes", "metta"]
+'''

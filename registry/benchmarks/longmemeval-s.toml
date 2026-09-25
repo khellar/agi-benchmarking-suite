@@ -1,0 +1,17 @@
+id = "longmemeval-s"
+label = "LongMemEval S"
+name = "LongMemEval (S, cleaned)"
+kind = "memory"
+description = "Chat histories of about 115,000 tokens, delivered one conversation at a time, then a question on extraction, multi-session reasoning, knowledge updates, temporal reasoning or abstention."
+homepage = "https://github.com/xiaowu0162/LongMemEval"
+maintainers = ["khellar"]
+scoring = "judge"
+tags = ["memory", "long context"]
+config = '''
+[environments.longmemeval-s]
+adapter = "omegaeval.envs.chatmemory:ChatMemory"
+
+[environments.longmemeval-s.options]
+path = "/data/longmemeval_s_cleaned.json"
+judge_all = true
+'''

@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Benchmark registry</title>
+<meta name="description" content="Benchmarks anyone can load with omegaeval, and result releases anyone can verify.">
+<link rel="stylesheet" href="site.css">
+</head>
+<body>
+<header class="top"><div class="in">
+  <a class="brand" href="./"><span class="mark" aria-hidden="true"></span>agi-benchmarking-suite</a>
+  <nav class="links" aria-label="Site">
+    <a href="./">Home</a>
+    <a href="console/">Console</a>
+    <a href="registry.html" aria-current="page">Registry</a>
+    <a href="{{repository}}/tree/main/docs">Docs</a>
+    <a href="{{repository}}">GitHub</a>
+  </nav>
+</div></header>
+<main>
+  <h1>Registry</h1>
+  <p class="lead">Benchmarks anyone can load with <code>omegaeval add &lt;id&gt;</code>, and result releases whose numbers are recomputed from their own sealed files before they appear here.</p>
+  <div class="btns">
+    <a class="btn primary" href="{{repository}}/issues/new?template=register-benchmark.yml">Register a benchmark</a>
+    <a class="btn" href="{{repository}}/issues/new?template=register-results.yml">Register results</a>
+    <a class="btn" href="{{repository}}/blob/main/docs/REGISTRY.md">How registration works</a>
+  </div>
+
+  <div class="toolbar">
+    <input id="q" type="search" placeholder="Find by name, id, tag or agent" aria-label="Find benchmarks and results">
+    <select id="kind" aria-label="Shape"><option value="">every shape</option><option value="interactive">interactive</option><option value="qa">qa</option><option value="memory">memory</option></select>
+  </div>
+
+  <h2 id="benchmarks">Benchmarks</h2>
+  <div class="grid" id="bench-list"><div class="empty">Loading the registry…</div></div>
+  <p class="sub" id="builtin"></p>
+
+  <h2 id="results">Results</h2>
+  <p class="sub">Listed newest first, not ranked. Each release's numbers come from its bundle, checked against every checksum when this page was built.</p>
+  <div id="result-list"><div class="empty">Loading…</div></div>
+</main>
+<footer id="foot">omegaeval {{version}} · built {{built}} · <a href="{{repository}}">source on GitHub</a></footer>
+<script>
+const REPO="{{repository}}";
+const $=s=>document.querySelector(s);
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const fmt=n=>n==null?'—':Number(n).toLocaleString();
+let DATA={benchmarks:[],results:[]};
+const who=list=>(list||[]).map(h=>`<a href="https://github.com/${encodeURIComponent(h)}">@${esc(h)}</a>`).join(', ');
+function benchCard(b){
+  return `<div class="card"><h3>${esc(b.label)} <span class="sub">${esc(b.id)}</span></h3><div class="sub">${esc(b.name)}</div>
+  <div class="meta"><span class="pill">${esc(b.kind)}</span>${b.scoring?`<span class="pill">${esc(b.scoring)} scoring</span>`:''}${b.license?`<span class="pill">${esc(b.license)}</span>`:''}</div>
+  <p>${esc(b.description)}</p>
+  <pre><code>${b.install?esc(b.install)+'\n':''}omegaeval add ${esc(b.id)}
+omegaeval conform ${esc(b.id)}</code></pre>
+  <details><summary>The config block it adds</summary><pre><code>${esc(b.config)}</code></pre></details>
+  ${(b.tags||[]).length?`<div class="tags">${b.tags.map(t=>`<span class="pill">${esc(t)}</span>`).join('')}</div>`:''}
+  <div class="sub" style="margin-top:10px"><a href="${esc(b.homepage)}">homepage</a> · maintained by ${who(b.maintainers)}</div></div>`;
+}
+function resultCard(r){
+  const b=DATA.benchmarks.find(x=>x.id===r.benchmark);const label=b?b.label:r.benchmark;
+  const status=r.verified===true?'<span class="pill ok">verified</span>':r.verified===false?`<span class="pill warn" title="${esc((r.problems||[]).join('; '))}">not verified</span>`:'<span class="pill">not checked</span>';
+  const sets=(r.summary?.sets||[]).map(s=>`<tr><td>${esc(s.task)}</td><td>${esc(s.agent)}${s.variant?' ['+esc(s.variant)+']':''}</td><td>${fmt(s.solved)} of ${fmt(s.graded)} graded</td><td>${fmt(s.episodes)}</td><td>${s.held?fmt(s.held)+' held':''}${s.void?' '+fmt(s.void)+' void':''}</td><td>${esc((s.judges||[]).join(', '))}</td><td>${esc((s.agent_versions||[]).join(', '))}</td></tr>`).join('');
+  return `<div class="card" style="margin-bottom:14px"><h3>${esc(label)} · ${esc(r.agent)} <span class="sub">${esc(r.release)}</span></h3>
+  <div class="meta">${status}<span class="sub">${esc(r.date)}</span>${r.summary?.logs_withheld?'<span class="pill">raw logs withheld</span>':''}${r.summary?.harness?`<span class="sub">${esc(r.summary.harness)}</span>`:''}</div>
+  ${r.agent_description?`<p>${esc(r.agent_description)}</p>`:''}
+  ${sets?`<div class="scroll"><table><thead><tr><th>Task</th><th>Agent</th><th>Solved</th><th>Episodes</th><th>Other</th><th>Judged by</th><th>Agent version</th></tr></thead><tbody>${sets}</tbody></table></div>`:`<p class="sub">${esc((r.problems||[]).join('; '))}</p>`}
+  ${r.judged_by?`<p class="sub">Judged by ${esc(r.judged_by)}.</p>`:''}${r.notes?`<p>${esc(r.notes)}</p>`:''}
+  <div class="sub" style="margin-top:8px"><a href="${esc(r.bundle)}">bundle</a> · sha256 <code>${esc(String(r.bundle_sha256).slice(0,16))}…</code> · maintained by ${who(r.maintainers)}</div></div>`;
+}
+function render(){
+  const q=$('#q').value.trim().toLowerCase(),kind=$('#kind').value;
+  const hit=(...xs)=>!q||xs.flat().some(x=>String(x||'').toLowerCase().includes(q));
+  const bs=DATA.benchmarks.filter(b=>(!kind||b.kind===kind)&&hit(b.id,b.label,b.name,b.description,b.tags));
+  $('#bench-list').innerHTML=bs.length?bs.map(benchCard).join(''):`<div class="empty">${DATA.benchmarks.length?'No benchmark matches.':'No benchmarks registered yet.'}</div>`;
+  const rs=DATA.results.filter(r=>{const b=DATA.benchmarks.find(x=>x.id===r.benchmark);return (!kind||!b||b.kind===kind)&&hit(r.release,r.agent,r.benchmark,b?.label,r.agent_description)});
+  $('#result-list').innerHTML=rs.length?rs.map(resultCard).join(''):`<div class="empty">${DATA.results.length?'No result matches.':`No results registered yet. Make a release with <code>omegaeval release</code>, pack it with <code>omegaeval bundle</code>, host the file, and <a href="${REPO}/issues/new?template=register-results.yml">register it</a>.`}</div>`;
+}
+fetch('registry.json').then(r=>{if(!r.ok)throw new Error(r.statusText);return r.json()}).then(d=>{DATA=d;
+  $('#builtin').textContent=`Built into omegaeval, no registration needed: ${(d.builtin||[]).join(', ')}. Registry data generated ${String(d.generated||'').replace('T',' ').replace('+00:00',' UTC')}.`;
+  render()}).catch(e=>{$('#bench-list').innerHTML=`<div class="empty">Could not load registry.json: ${esc(e.message)}</div>`;$('#result-list').innerHTML=''});
+$('#q').addEventListener('input',render);$('#kind').addEventListener('change',render);
+</script>
+</body>
+</html>

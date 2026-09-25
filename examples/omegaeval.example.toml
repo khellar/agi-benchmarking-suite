@@ -1,0 +1,79 @@
+# omegaeval.toml: the agents and hives you benchmark, and where their evidence lives.
+# Keep this file private: the tokens let a process act as an agent. A token written as "${NAME}"
+# is read from the environment variable NAME instead, for CI and containers.
+
+[harness]
+store = "./omegaeval-store"          # append-only history of every episode; keep it on a local disk
+
+[harness.gateway]                    # OmegaClaw agents dial this with commchannel=websocket
+host = "0.0.0.0"
+port = 8770
+agent_url = "ws://host.docker.internal:8770"   # the address as seen from inside the agent's container
+
+[harness.console]
+host = "127.0.0.1"
+port = 8780
+
+[harness.episodes]
+step_timeout_s = 600                 # no action for this long ends the episode as agent_timeout
+wall_s = 10800
+grace_s = 15                         # keep reading the agent's log this long after the episode ends
+require_tick = true                  # replies must name the episode and step: ep=3f9a1c1 t=12 move N
+predictions = false                  # true asks the agent for p=<0..1> with each action
+
+# One block per agent. logs and memory are read-only.
+[agents.oma-1]
+token = "replace-with-a-long-random-token"
+label = "Omega v0.1.19, Anthropic, reasoning medium"
+logs = { docker = "omega" }                    # or { file = "/srv/agents/oma-1/omega.log" }
+memory = { docker = "omega" }                  # or { home = "/srv/agents/oma-1/PeTTa" }
+config = { provider = "Anthropic", reasoningMode = "medium", maxOutputToken = 6000 }   # recorded in every manifest
+
+# [agents.oma-2]
+# token = "replace-with-another-token"
+# logs = { docker = "omega-2", host = "ssh://user@gpu-box" }
+# memory = { docker = "omega-2", host = "ssh://user@gpu-box" }
+
+# Agents other than OmegaClaw: the harness reaches them, so they need no token.
+# [agents.claude]
+# label = "Claude Opus 5.5, no tools"
+# connect = { python = "claude:Claude", cwd = "examples/agents" }
+#
+# [agents.my-service]
+# connect = { http = "http://127.0.0.1:9100/" }
+#
+# [agents.my-script]
+# connect = { command = ["python3", "my_agent.py"] }
+
+# A hive is a set of agents that play one episode together. The actor takes the
+# actions; the others advise, and their messages are relayed to the whole hive.
+# [hives.alpha]
+# members = ["oma-1", "oma-2"]
+# actor = "oma-1"
+# relay = true
+
+# Benchmarks beyond the built-in samples. A .py file in ./benchmarks is found on its own.
+# A block here points an adapter at a data file. Relative paths resolve against this file.
+# [environments.agi_maze]
+# adapter = "agi_maze_omegaeval:AGIMaze"
+#
+# [environments.hle]
+# adapter = "omegaeval.envs.qa:QADataset"
+# [environments.hle.options]
+# path = "/data/hle.jsonl"
+# name = "Humanity's Last Exam (text-only)"
+# judge_all = true
+# allow_tools = ["send", "remember", "query", "pin", "episodes", "metta"]
+#
+# [environments.longmemeval]
+# adapter = "omegaeval.envs.chatmemory:ChatMemory"
+# [environments.longmemeval.options]
+# path = "/data/longmemeval_s_cleaned.json"
+# name = "LongMemEval (S, cleaned)"
+# judge_all = true
+
+# Optional token prices in USD per million tokens, by model name as logged by Omega.
+# [prices."<model>"]
+# input = 0.0
+# cached_input = 0.0
+# output = 0.0

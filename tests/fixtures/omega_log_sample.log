@@ -1,0 +1,38 @@
+# Parser fixture for omegaeval.omega_trace. Lines starting with "#" are ignored by the parser.
+#
+# OBSERVED: message bodies marked [obs] are verbatim from a maintainer's `docker logs` excerpt in
+# singnet/Omega#311 (comment of 2026-08-13). The issue shows them without the timestamp and level
+# prefix, so that prefix is added here in the format of config/logging.conf. The maintainer's
+# markdown bold around REMEMBER-SUCCESS is removed. The websearch result line is truncated in the
+# issue and is kept truncated on purpose, to test robustness.
+# OBSERVED: the ERROR line marked [obs] is verbatim from singnet/Omega#321.
+#
+# CONSTRUCTED: lines marked [con] follow the format strings in src/loop.metta,
+# providers/lib_llm_ext.py and src/helper.py at commit ee0618a. They were not observed in a log.
+Welcome to PeTTa (noise line: not a log record)
+2026-08-13 11:11:30 | INFO     | skills | "Add skill: - Load workflow instructions: workflow-load-instructions name"
+2026-08-13 11:11:40 | INFO     | loop | (---------iteration 41)
+2026-08-13 11:11:40 | INFO     | loop | (HUMAN-MSG: @...: Find the current Bitcoin price via websearch and remember the result via remember with key _quote_btc-price_quote_. Then show me what you remembered.)
+2026-08-13 11:11:40 | INFO     | loop | (CHARS_SENT: 402 "PROMPT: You are Omega. SKILLS: - Remember a particular string such as skills and memories: remember string_newline_ OUTPUT_FORMAT: Up to 5 lines, do not wrap quotes around args, do not use variables:_newline_ toolName1 arg1 SAVE_PERMANENT_FILES_DIR: /PeTTa/repos/Omega/memory LAST_SKILL_USE_RESULTS: () HISTORY: (_quote_2026-08-13 11:10:02_quote_ ((pin _quote_idle_quote_))) TIME: 2026-08-13 11:11:40 :-:-:-: (HUMAN-MSG: @...: Find the current Bitcoin price)")
+2026-08-13 11:11:44 | INFO     | lib_llm_ext | [LLM_USAGE] provider=ASICloud model=minimax/minimax-m3 finish_reason=stop prompt_tokens=10233 cached_tokens=9984 completion_tokens=212 reasoning_tokens=180
+2026-08-13 11:11:44 | INFO     | loop | (RESPONSE: ((websearch "current Bitcoin price USD")))
+2026-08-13 11:11:47 | INFO     | loop | (RESPONSE: (RESULTS: ((COMMAND_RETURN: ((websearch "current Bitcoin price USD") ((TITLE: Bitcoin price today, BTC to USD live price...
+2026-08-13 11:12:01 | INFO     | loop | (---------iteration 42)
+2026-08-13 11:12:01 | INFO     | loop | ""
+2026-08-13 11:12:01 | INFO     | loop | (CHARS_SENT: 120 "PROMPT: You are Omega. SKILLS: - x_newline_ OUTPUT_FORMAT: y SAVE_PERMANENT_FILES_DIR: /m LAST_SKILL_USE_RESULTS: (RESULTS: ()) HISTORY: h TIME: 2026-08-13 11:12:01 :-:-:-:")
+2026-08-13 11:12:02 | INFO     | lib_llm_ext | [LLM_USAGE] provider=ASICloud model=minimax/minimax-m3 finish_reason=stop prompt_tokens=10480 cached_tokens=10233 completion_tokens=95 reasoning_tokens=40
+2026-08-13 11:12:02 | INFO     | loop | (RESPONSE: ((remember "btc-price: ~$63,353 USD (CoinMarketCap live, 24h volume $23.15B, mcap $1.27T, down 0.31% 24h)") (send "Remembered BTC price: ~$63,353 USD (per CoinMarketCap live feed).")))
+2026-08-13 11:12:02 | INFO     | loop | (RESPONSE: (RESULTS: ((COMMAND_RETURN: ((remember "btc-price: ~$63,353 USD (CoinMarketCap live, 24h volume $23.15B, mcap $1.27T, down 0.31% 24h)") REMEMBER-SUCCESS)) (COMMAND_RETURN: ((send "Remembered BTC price: ~$63,353 USD (per CoinMarketCap live feed).") None)))))
+2026-08-13 11:12:20 | INFO     | loop | (---------iteration 43)
+2026-08-13 11:12:20 | INFO     | loop | (HUMAN-MSG: @...: What exactly is stored in memory under key btc-price? Show the exact contents via query-memory.)
+2026-08-13 11:12:20 | INFO     | loop | (RESPONSE: ((query "btc-price")))
+2026-08-13 11:12:21 | INFO     | loop | (RESPONSE: (RESULTS: ((COMMAND_RETURN: ((query "btc-price") [['2026-08-13 11:12:02', 'btc-price: ~$63,353 USD (CoinMarketCap live, 24h volume $23.15B, mcap $1.27T, down 0.31% 24h)']])))))
+2026-08-13 11:12:40 | INFO     | loop | (---------iteration 44)
+2026-08-13 11:12:40 | INFO     | loop | (RESPONSE: ((send "Queried memory for \"btc-price\": btc-price: ~$63,353 USD (CoinMarketCap live, 24h volume $23.15B, mcap $1.27T, down 0.31% 24h)")))
+2026-08-13 11:13:00 | INFO     | loop | (---------iteration 45)
+2026-08-13 11:13:00 | INFO     | loop | (RESPONSE: ((metta "(|- ((--> (× sam garfield) friend) (stv 1.0 0.9)) ((--> garfield animal) (stv 1.0 0.9)))") (Error UNKNOWN_SKILL_CALL "No \"action needed\"")))
+2026-08-13 11:13:01 | INFO     | loop | (RESPONSE: (RESULTS: ((COMMAND_RETURN: ((metta "(|- ((--> (× sam garfield) friend) (stv 1.0 0.9)) ((--> garfield animal) (stv 1.0 0.9)))") "((--> (× sam garfield) (× friend animal)) (stv 1.0 0.81))")) (COMMAND_RETURN: ((Error UNKNOWN_SKILL_CALL "No \"action needed\"") (ALERT_FAILED UNKNOWN_SKILL_CALL "No \"action needed\""))))))
+2026-08-17 13:23:43 | ERROR    | lib_llm_ext | [AIProvider.chat]: Exception while communicating with LLM:
+2026-09-25T10:00:00.123456789Z 2026-09-25 10:00:00 | INFO     | loop | (---------iteration 46)
+2026-09-25T10:00:00.223456789Z 2026-09-25 10:00:00 | INFO     | loop | (HUMAN-MSG: [omegaeval ep=k7x2 t=3] You are at (1,2). Walls: N,W. Actions: move E | move S. Reply with: send t=3 <action>)
+2026-09-25T10:00:04.000000001Z 2026-09-25 10:00:04 | INFO     | loop | (RESPONSE: ((pin "maze: at (1,2), exits E and S") (send "t=3 move E p=0.7")))

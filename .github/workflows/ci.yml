@@ -1,0 +1,93 @@
+name: tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ["3.11", "3.12", "3.13", "3.14"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+          cache: pip
+          cache-dependency-path: pyproject.toml
+      - name: Install
+        run: pip install -e ".[test]" coverage
+      - name: Tests, including the checks that keep the docs and the code in step
+        run: coverage run -m pytest -q
+      - name: Coverage
+        if: matrix.python == '3.12'
+        run: coverage report --skip-covered --sort=cover
+      - name: The generated reference is current
+        run: python -m omegaeval.docgen --check
+      - name: The commands in the README work from a fresh install
+        run: |
+          cd "$(mktemp -d)"
+          omegaeval baseline random qa-sample --seeds 1-10
+          omegaeval baseline oracle qa-sample --seeds 1-10
+          omegaeval export qa-sample --html report.html
+          omegaeval verify
+          omegaeval replay qa-sample
+          test -s report.html
+
+  package:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Build the wheel and the source distribution
+        run: pip install build && python -m build
+      - name: The wheel works in a fresh environment, with an agent written next to its config
+        run: |
+          python -m venv "$RUNNER_TEMP/fresh"
+          "$RUNNER_TEMP/fresh/bin/pip" install dist/*.whl pytest
+          mkdir "$RUNNER_TEMP/user" && cp examples/agents/notebook.py "$RUNNER_TEMP/user/my_agent.py"
+          cd "$RUNNER_TEMP/user"
+          "$RUNNER_TEMP/fresh/bin/omegaeval" init
+          printf '\n[agents.mine]\nconnect = { python = "my_agent:Notebook" }\n' >> omegaeval.toml
+          printf '\n[agents.script]\nconnect = { command = ["python3", "my_agent.py"] }\n' >> omegaeval.toml
+          "$RUNNER_TEMP/fresh/bin/omegaeval" run mine qa-sample --seeds 1-5 --local
+          "$RUNNER_TEMP/fresh/bin/omegaeval" run script memory-sample --task recall --seeds 1-3 --local
+      - name: The source distribution runs its own tests against the wheel
+        run: |
+          mkdir "$RUNNER_TEMP/sdist"
+          tar xzf dist/*.tar.gz -C "$RUNNER_TEMP/sdist" --strip-components=1
+          cd "$RUNNER_TEMP/sdist" && "$RUNNER_TEMP/fresh/bin/python" -m pytest -q -p no:cacheprovider
+
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Python
+        run: pip install ruff && ruff check .
+      - name: The console and site scripts parse
+        run: |
+          python - <<'EOF'
+          import pathlib, re
+          out = pathlib.Path("/tmp/js"); out.mkdir()
+          for page in ["omegaeval/console/index.html", "website/registry.html"]:
+              html = pathlib.Path(page).read_text()
+              js = "\n".join(re.findall(r"<script(?![^>]*application/json)[^>]*>(.*?)</script>", html, re.S))
+              (out / (pathlib.Path(page).stem + ".js")).write_text(js)
+          EOF
+          for f in /tmp/js/*.js; do node --check "$f"; done

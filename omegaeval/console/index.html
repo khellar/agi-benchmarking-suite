@@ -1,0 +1,948 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>OmegaEval Console</title>
+<meta name="description" content="Benchmark console for OmegaClaw agents and hives">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+:root{
+  color-scheme:light;
+  --bg:#f3f4f6;--surface:#ffffff;--surface-2:#f7f8fa;--ink:#15181c;--ink-2:#4f565f;--muted:#80878f;
+  --line:#e2e5ea;--line-2:#cdd2d9;--hatch:#d9dde3;
+  --better:#2a78d6;--better-bg:#e6effb;--worse:#e34948;--worse-bg:#fbe6e6;--neutral:#9aa0a8;
+  --accent:#0e7c86;--accent-bg:#e3f1f2;
+  --llm:#1baf7a;--pln:#eb6834;--mem:#4a3aa7;--warn:#c98500;--crit:#d03b3b;--good:#0ca30c;
+  --sans:'IBM Plex Sans',system-ui,-apple-system,'Segoe UI',sans-serif;
+  --mono:'IBM Plex Mono',ui-monospace,SFMono-Regular,Menlo,monospace;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    color-scheme:dark;
+    --bg:#0e1012;--surface:#161a1e;--surface-2:#1c2126;--ink:#eef0f3;--ink-2:#aab1ba;--muted:#7b838d;
+    --line:#2a3037;--line-2:#3a424b;--hatch:#2c333a;
+    --better:#3987e5;--better-bg:#17304f;--worse:#e66767;--worse-bg:#4a2426;--neutral:#6f767f;
+    --accent:#3aa7b1;--accent-bg:#173437;
+    --llm:#199e70;--pln:#d95926;--mem:#9085e9;--warn:#c98500;--crit:#e66767;--good:#0ca30c;
+  }
+}
+:root[data-theme="dark"]{
+  color-scheme:dark;
+  --bg:#0e1012;--surface:#161a1e;--surface-2:#1c2126;--ink:#eef0f3;--ink-2:#aab1ba;--muted:#7b838d;
+  --line:#2a3037;--line-2:#3a424b;--hatch:#2c333a;
+  --better:#3987e5;--better-bg:#17304f;--worse:#e66767;--worse-bg:#4a2426;--neutral:#6f767f;
+  --accent:#3aa7b1;--accent-bg:#173437;
+  --llm:#199e70;--pln:#d95926;--mem:#9085e9;--warn:#c98500;--crit:#e66767;--good:#0ca30c;
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{height:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.45 var(--sans);-webkit-font-smoothing:antialiased}
+button,input,select,textarea{font:inherit;color:inherit}
+table{font:inherit;border-collapse:collapse}
+h1{font-size:18px;font-weight:600;margin:0;text-wrap:balance}
+h2{font-size:13.5px;font-weight:600;margin:0}
+h3{font-size:11px;font-weight:500;margin:0 0 6px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+.sub{color:var(--muted);font-size:12.5px}
+.mono{font-family:var(--mono);font-size:12px}
+.num{font-variant-numeric:tabular-nums}
+.na{color:var(--muted)}
+.why{border-bottom:1px dotted var(--muted);cursor:help}
+.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--surface);border-bottom:1px solid var(--line);padding-block:9px;padding-inline:16px;display:flex;gap:10px 14px;align-items:center;flex-wrap:wrap}
+.brand{font-weight:600;font-size:15px;display:flex;align-items:center;gap:10px}
+.brand .mark{width:18px;height:18px;border-radius:4px;background:var(--ink);position:relative;flex:none}
+.brand .mark::after{content:"";position:absolute;inset:4px;border-radius:2px;border:2px solid var(--surface);border-right-color:transparent}
+.src{font-weight:400;font-size:11.5px;border:1px solid var(--line-2);border-radius:999px;padding:1px 8px;color:var(--ink-2);display:inline-flex;gap:6px;align-items:center;max-width:320px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.src i{width:7px;height:7px;border-radius:50%;background:var(--muted);display:inline-block}
+.src.live i{background:var(--good)}
+.ctx{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-left:auto}
+.field{display:flex;gap:6px;align-items:center;border:1px solid var(--line-2);background:var(--surface-2);border-radius:6px;padding:3px 8px;max-width:100%}
+.field span{color:var(--muted);font-size:10.5px;text-transform:uppercase;letter-spacing:.06em;white-space:nowrap}
+.field select{border:0;background:transparent;font-family:var(--mono);font-size:12px;max-width:52vw;padding:2px 0}
+.field select:focus-visible,.field input:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:3px}
+.field input{border:0;background:transparent;font-family:var(--mono);font-size:12px;width:15ch;padding:2px 0;color:var(--ink)}
+.links{display:inline-flex;gap:10px;font-weight:400;font-size:12px}
+.links a{color:var(--ink-2);text-decoration:none;border-bottom:1px solid var(--line-2)}
+.links a:hover{color:var(--ink);border-bottom-color:var(--ink-2)}
+.body{display:grid;grid-template-columns:160px minmax(0,1fr)}
+.rail{border-right:1px solid var(--line);background:var(--surface);padding-block:14px;padding-inline:8px;display:flex;flex-direction:column;gap:2px;align-self:start;position:sticky;top:calc(env(safe-area-inset-top,0px) + 52px)}
+.rail button{all:unset;cursor:pointer;padding:8px 12px;border-radius:6px;color:var(--ink-2);display:flex;justify-content:space-between;align-items:center;font:inherit}
+.rail button small{font-family:var(--mono);font-size:11px;color:var(--muted);white-space:nowrap}
+.rail button:hover{background:var(--surface-2)}
+.rail button[aria-selected="true"]{background:var(--surface-2);color:var(--ink);font-weight:500;box-shadow:inset 3px 0 0 var(--accent)}
+.rail button:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+main{padding-block:18px 48px;padding-inline:20px;min-width:0}
+.view{max-width:1280px;margin:0 auto;display:grid;gap:14px}
+.vh{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding-block:12px;padding-inline:14px;min-width:0}
+.card>h2{margin-bottom:2px}
+.card>.sub{margin-bottom:10px}
+.scroll{overflow-x:auto}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.pill{display:inline-flex;align-items:center;gap:6px;font-size:11.5px;border-radius:999px;padding:2px 9px;border:1px solid var(--line-2);color:var(--ink-2);white-space:nowrap}
+.pill i{width:7px;height:7px;border-radius:50%;background:var(--muted);display:inline-block}
+.pill.ok i{background:var(--good)}.pill.bad i{background:var(--crit)}.pill.warn i{background:var(--warn)}
+.pill.na{border-style:dashed;color:var(--muted)}
+.empty{border:1px dashed var(--line-2);border-radius:8px;padding:16px;color:var(--ink-2);background:var(--surface);line-height:1.6}
+.empty b{color:var(--ink)}
+.empty code,.code{font-family:var(--mono);font-size:12px;background:var(--surface-2);border:1px solid var(--line);border-radius:4px;padding:1px 5px}
+pre.cmd{font-family:var(--mono);font-size:12px;background:var(--surface-2);border:1px solid var(--line);border-radius:6px;padding:8px 10px;overflow-x:auto;margin:6px 0;white-space:pre}
+.btn{border:1px solid var(--line-2);background:var(--surface);border-radius:6px;padding:6px 12px;cursor:pointer;font-size:13px}
+.btn.primary{background:var(--ink);color:var(--surface);border-color:var(--ink)}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.btn:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+/* play */
+.playgrid{display:grid;grid-template-columns:290px minmax(0,1fr);gap:14px;align-items:start}
+.world .grid{display:inline-grid;gap:2px;background:var(--surface-2);padding:6px;border-radius:6px;border:1px solid var(--line)}
+.world .c{border-radius:3px;display:grid;place-items:center;font-family:var(--mono);font-size:11px;font-weight:500}
+.world .c.q{border:1px dashed var(--line-2)}
+.world .c.w{background:var(--ink-2)}
+.world .c.s{background:var(--surface)}
+.world .c.v{background:var(--better-bg)}
+.world .c.k{color:var(--warn);background:var(--surface)}
+.world .c.e{color:var(--crit);background:var(--surface)}
+.world .c.a{background:var(--accent);color:#fff}
+.wstats{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}
+.wstats div{border:1px solid var(--line);border-radius:6px;padding:7px 9px;background:var(--surface-2)}
+.wstats small{display:block;color:var(--muted);font-size:10.5px;text-transform:uppercase;letter-spacing:.06em}
+.wstats b{font-family:var(--mono);font-weight:500;font-size:13px}
+.strip-card[data-active="true"]{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent)}
+.striphead{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:6px}
+.striphead .who{font-weight:600}
+.striphead .who .mono{color:var(--muted);font-weight:400;margin-left:6px}
+.striphead .pills{margin-left:auto;display:flex;gap:6px;flex-wrap:wrap}
+svg.strip{display:block;cursor:crosshair}
+svg.strip .lab{fill:var(--ink);font-size:11.5px}
+svg.strip .lab.off{fill:var(--muted)}
+svg.strip .lab2{fill:var(--muted);font-size:10px;font-family:var(--mono)}
+svg.strip .tick{fill:var(--muted);font-size:10px;font-family:var(--mono)}
+svg.strip .bg{fill:var(--surface)}svg.strip .bg.alt{fill:var(--surface-2)}
+svg.strip .off-bg{fill:url(#hatch)}
+svg.strip .evl{stroke:var(--ink-2);stroke-width:1;stroke-dasharray:3 3}
+svg.strip .evt{fill:var(--ink-2);font-size:10px;font-weight:500}
+svg.strip .sel{fill:var(--accent);opacity:.14;pointer-events:none}
+svg.strip .selline{stroke:var(--accent);stroke-width:1.2;pointer-events:none}
+svg.strip [data-tip]{cursor:pointer}
+.scrub{display:flex;align-items:center;gap:10px;margin-top:6px}
+.scrub input{flex:1;accent-color:var(--accent)}
+.scrub .t{font-family:var(--mono);font-size:12px;min-width:120px;text-align:right}
+.legend{display:flex;gap:14px;flex-wrap:wrap;color:var(--muted);font-size:11.5px;margin-top:8px;align-items:center}
+.legend svg{vertical-align:middle;margin-right:4px}
+.tcards{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:10px}
+.tc{border:1px solid var(--line);border-radius:6px;padding:9px 11px;background:var(--surface-2);min-width:0;font-size:12.5px}
+.tc.off{background:repeating-linear-gradient(135deg,var(--surface-2) 0 6px,var(--surface) 6px 12px);color:var(--muted)}
+.tc .kv{display:grid;grid-template-columns:auto 1fr;gap:3px 10px;font-size:12px}
+.tc .kv>span:nth-child(odd){color:var(--muted)}
+.tc pre{font-family:var(--mono);font-size:11.5px;line-height:1.5;white-space:pre-wrap;word-break:break-word;margin:6px 0 0;padding:6px 8px;background:var(--surface);border:1px solid var(--line);border-radius:4px;max-height:220px;overflow:auto}
+.tc .call{border-top:1px solid var(--line);padding-top:6px;margin-top:6px}
+.tc .call:first-of-type{border-top:0;padding-top:0;margin-top:0}
+.badge{display:inline-block;font-family:var(--mono);font-size:10.5px;border-radius:3px;padding:0 5px;border:1px solid var(--line-2);color:var(--ink-2);margin-right:4px}
+.badge.memory{border-color:var(--mem);color:var(--mem)}.badge.reasoning{border-color:var(--pln);color:var(--pln)}
+.badge.action{border-color:var(--accent);color:var(--accent)}.badge.error{border-color:var(--crit);color:var(--crit)}
+.bars{display:grid;grid-template-columns:auto 1fr auto;gap:3px 8px;align-items:center;font-size:11.5px}
+.bars i{display:block;height:6px;border-radius:3px;background:var(--line-2)}
+/* compare */
+table.t{width:100%}
+table.t th{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:500;text-align:left;padding:6px 10px;border-bottom:1px solid var(--line);white-space:nowrap}
+table.t td{padding:7px 10px;border-bottom:1px solid var(--line);vertical-align:middle}
+table.t td.v{font-family:var(--mono);font-size:12.5px;white-space:nowrap}
+table.t tr.off td{color:var(--muted)}
+table.t tbody tr.click{cursor:pointer}
+table.t tbody tr.click:hover td{background:var(--surface-2)}
+.seeds{display:flex;gap:2px}
+.seeds i{width:11px;height:14px;border-radius:2px;display:inline-block;background:var(--line-2)}
+.seeds i.better{background:var(--better)}.seeds i.worse{background:var(--worse)}.seeds i.same{background:var(--neutral)}
+.seeds i.none{background:transparent;border:1px dashed var(--line-2)}
+.reads.better{color:var(--better)}.reads.worse{color:var(--worse)}
+.pickers{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.pickers .field select{max-width:40vw}
+svg.band{display:block;width:100%;height:auto;overflow:visible}
+svg.band .track{stroke:var(--line-2);stroke-width:6;stroke-linecap:round}
+svg.band .bl{fill:var(--ink-2);font-size:11px}
+svg.band .bv{fill:var(--muted);font-size:10.5px;font-family:var(--mono)}
+svg.band .gl{stroke:var(--line);stroke-width:1}
+.form{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px;align-items:end}
+.form label{display:grid;gap:4px;font-size:12px;color:var(--ink-2)}
+.form input,.form select{border:1px solid var(--line-2);border-radius:6px;padding:6px 8px;background:var(--surface);min-width:0}
+.dot{width:8px;height:8px;border-radius:50%;display:inline-block;background:var(--muted);margin-right:6px;vertical-align:1px}
+.dot.on{background:var(--good)}
+.drop{position:fixed;inset:0;background:color-mix(in srgb,var(--accent) 18%,transparent);border:3px dashed var(--accent);display:grid;place-items:center;font-size:18px;font-weight:600;z-index:30;pointer-events:none}
+.tip{position:fixed;z-index:40;background:var(--ink);color:var(--surface);font-size:12px;line-height:1.45;padding:7px 10px;border-radius:6px;pointer-events:none;max-width:380px;box-shadow:0 4px 14px rgba(0,0,0,.18);white-space:pre-line}
+.world canvas{display:block;image-rendering:pixelated;border:1px solid var(--line);border-radius:4px;max-width:100%}
+.world .tiles{display:inline-grid;gap:1px;background:var(--line);padding:1px;border-radius:4px;max-width:100%}
+.world .tiles div{display:grid;place-items:center;font-family:var(--mono);font-size:9.5px;font-weight:600;color:#fff;text-shadow:0 0 2px #000}
+.qcard{border:1px solid var(--line);border-radius:8px;padding:12px;background:var(--surface-2);display:grid;gap:8px}
+.qcard .q{font-size:14px;line-height:1.5;white-space:pre-wrap}
+.qcard ol{margin:0;padding:0;list-style:none;display:grid;gap:4px}
+.qcard li{border:1px solid var(--line);border-radius:5px;padding:4px 8px;background:var(--surface);font-size:13px}
+.qcard li.picked{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent)}
+.qcard li.gold{border-color:var(--good);box-shadow:0 0 0 1px var(--good)}
+.qcard .ans{font-family:var(--mono);font-size:12.5px;white-space:pre-wrap}
+.tl{display:grid;gap:3px;max-height:420px;overflow:auto}
+.tl .it{display:grid;grid-template-columns:14px 1fr auto;gap:8px;align-items:center;padding:4px 6px;border-radius:5px;font-size:12.5px}
+.tl .it>i{width:10px;height:10px;border-radius:2px;border:1.5px solid var(--line-2);display:inline-block}
+.tl .it.done>i{background:var(--better);border-color:var(--better)}
+.tl .it.cur{background:var(--accent-bg)}
+.tl .it.ev{box-shadow:inset 3px 0 0 var(--good)}
+.tl .it .mem{font-family:var(--mono);font-size:11px;color:var(--mem);white-space:nowrap}
+.tscript{max-height:420px;overflow:auto;display:grid;gap:6px}
+.tscript .m{border:1px solid var(--line);border-radius:6px;padding:6px 8px;background:var(--surface-2);font-size:12px}
+.tscript .m.cur{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent)}
+.tscript .m.reply{background:var(--surface);margin-left:18px}
+.tscript .m pre{margin:4px 0 0;white-space:pre-wrap;word-break:break-word;font-family:var(--mono);font-size:11.5px}
+.pill.void{border-color:var(--crit);color:var(--crit)}.pill.void i{background:var(--crit)}
+.pill.judge{border-style:dashed}.pill.judge i{background:var(--warn)}
+@media (max-width:1000px){.playgrid{grid-template-columns:1fr}}
+@media (max-width:900px){
+  .body{grid-template-columns:1fr}
+  .rail{position:static;flex-direction:row;border-right:0;border-bottom:1px solid var(--line);overflow-x:auto;padding-block:6px;padding-inline:12px}
+  .rail button[aria-selected="true"]{box-shadow:inset 0 -2px 0 var(--accent)}
+  main{padding-inline:16px}
+  .ctx{margin-left:0}
+}
+</style>
+
+<header class="top">
+  <div class="brand"><span class="mark" aria-hidden="true"></span>OmegaEval Console <span class="src" id="srcchip"><i></i><span>no data</span></span><span class="links" id="links"></span></div>
+  <div class="ctx">
+    <label class="field"><span>Benchmark</span><select id="benchsel" aria-label="Benchmark"></select></label>
+    <label class="field"><span>Find</span><input id="runq" type="search" placeholder="agent, variant, seed" aria-label="Find runs by agent, variant, seed or run id"></label>
+    <label class="field"><span>Run</span><select id="runsel" aria-label="Run"></select></label>
+    <label class="field"><span>Same seed</span><select id="stacksel" aria-label="Another run of the same benchmark, task and seed, shown underneath"></select></label>
+  </div>
+</header>
+
+<div class="body">
+  <nav class="rail" aria-label="Views">
+    <button data-view="play" aria-selected="true">Play</button>
+    <button data-view="compare">Compare</button>
+    <button data-view="progress">Progress</button>
+    <button data-view="runs">Runs <small id="nruns"></small></button>
+    <button data-view="sources">Sources</button>
+  </nav>
+  <main>
+    <section class="view" id="view-play"></section>
+    <section class="view" id="view-compare" hidden></section>
+    <section class="view" id="view-progress" hidden></section>
+    <section class="view" id="view-runs" hidden></section>
+    <section class="view" id="view-sources" hidden></section>
+  </main>
+</div>
+<div class="drop" id="drop" hidden>Drop run bundles or exports</div>
+<div class="tip" id="tip" hidden></div>
+<script type="application/json" id="embedded-runs">{"schema":"omegaeval.export/0","runs":[]}</script>
+
+<script>
+"use strict";
+/* ============================== basics ============================== */
+const $=s=>document.querySelector(s);
+const esc=s=>String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+const fmt=(v,d=0)=>v==null||Number.isNaN(v)?'—':(typeof v==='number'?v.toLocaleString(undefined,{maximumFractionDigits:d,minimumFractionDigits:d}):String(v));
+const sgn=(v,d=0)=>v==null?'—':(v>0?'+':v<0?'−':'')+fmt(Math.abs(v),d);
+const median=a=>{const b=a.filter(x=>x!=null).sort((x,y)=>x-y);if(!b.length)return null;const m=b.length>>1;return b.length%2?b[m]:(b[m-1]+b[m])/2};
+const sum=a=>a.reduce((s,x)=>s+(x||0),0);
+const keyOf=b=>`${b.run_id}/${b.attempt}`;
+const tip=$('#tip');
+document.addEventListener('mouseover',e=>{const el=e.target.closest('[data-tip]');if(!el)return;tip.textContent=el.dataset.tip;tip.hidden=false;place(e)});
+document.addEventListener('mousemove',e=>{if(!tip.hidden)place(e)});
+document.addEventListener('mouseout',e=>{if(e.target.closest('[data-tip]'))tip.hidden=true});
+function place(e){const r=tip.getBoundingClientRect();let L=e.clientX+12,T=e.clientY+14;if(L+r.width>innerWidth-8)L=e.clientX-r.width-12;if(T+r.height>innerHeight-8)T=e.clientY-r.height-12;tip.style.left=Math.max(4,L)+'px';tip.style.top=Math.max(4,T)+'px'}
+const store={get(k,d){try{return localStorage.getItem(k)??d}catch(e){return d}},set(k,v){try{localStorage.setItem(k,v)}catch(e){}}};
+
+/* ============================== the field registry ==============================
+   Every element the console shows names its source here. status(b) says whether
+   the selected run carries it. "omega" fields exist in OmegaClaw but need an Omega
+   log in the run; "absent" fields do not exist in OmegaClaw at all. */
+const hasOmega=b=>Object.values(b?.agents||{}).some(a=>(a.iterations||[]).length>0);
+const hasEnv=b=>(b?.env||[]).some(e=>e.kind==='observation');
+const hasPred=b=>(b?.env||[]).some(e=>e.kind==='action'&&e.prediction!=null);
+const anyIter=(b,f)=>Object.values(b?.agents||{}).some(a=>(a.iterations||[]).some(f));
+const NO_OMEGA='This run has no trace for this agent. For OmegaClaw, configure logs = { docker = "<container>" } or { file = "<path>" } in omegaeval.toml. Any other agent can report trace events with its replies.';
+const NO_ENV='This run has no environment events. It is an imported log, not a benchmark episode.';
+const FIELDS=[
+ {id:'obs',group:'Play',label:'Observation',source:'Environment adapter, delivered by the gateway (env.jsonl, kind observation). The OmegaClaw log line (HUMAN-MSG: …) shows the loop turn that read it.',need:'env'},
+ {id:'context',group:'Play',label:'Context in',source:'Other agents: the context events they report. OmegaClaw log: (CHARS_SENT: N "<prompt>") from getContext in src/loop.metta, split into PROMPT, SKILLS, extensions, OUTPUT_FORMAT, LAST_SKILL_USE_RESULTS, HISTORY, TIME and input.',need:'omega'},
+ {id:'fullprompt',group:'Play',label:'Full prompt text',source:'The raw log line, read by line number. Local harness only, since exports keep an excerpt.',need:'local'},
+ {id:'llm',group:'Play',label:'LLM call and tokens',source:'Other agents: the llm events they report. OmegaClaw log: [LLM_USAGE] from providers/lib_llm_ext.py. Carries provider, model, finish reason, and prompt, cached, completion and reasoning tokens.',need:'omega'},
+ {id:'rawcompletion',group:'Play',label:'Raw completion text',source:'OmegaClaw log: [LLM_RAW], written at DEBUG level only. Start the agent with a logging config at DEBUG for lib_llm_ext (scripts/omega -l).',need:'raw'},
+ {id:'reasoningtext',group:'Play',label:'Reasoning text of a reasoning model',absent:'Not available from OmegaClaw. Providers return only a reasoning token count. OpenRouter is called with exclude: true, and the OpenAI and Anthropic paths return no reasoning text.'},
+ {id:'nalpln',group:'Play',label:'Reasoning: NAL, PLN or reported',source:'Other agents: the reasoning events they report, with their engine. OmegaClaw skill calls (metta "(|- …)") for NAL and (metta "(|~ …)") for PLN. Premises come from the call, conclusions with (stv f c) from its COMMAND_RETURN.',need:'omega'},
+ {id:'atoms',group:'Play',label:'Premises and conclusions per call',source:'Premises and conclusions of each metta call, or of each reasoning event an agent reports. Each OmegaClaw metta call starts with a fresh AtomSpace.',need:'omega'},
+ {id:'atomspace',group:'Play',label:'Persistent AtomSpace, concepts formed',absent:'Not in OmegaClaw. Each (metta (|- …)) call starts with a fresh AtomSpace, and nothing persists between calls (docs/reference-internals-memory-store.md). There is no concept store to read.'},
+ {id:'belief',group:'Play',label:'Belief p(success)',source:'The agent writes p=<0..1> in its reply. Needs [harness.episodes] predictions = true.',need:'pred',absentWhenOff:'OmegaClaw commits no predictions of its own. Turn on predictions = true in omegaeval.toml to ask for p with each action.'},
+ {id:'surprise',group:'Play',label:'Surprise',source:'Derived: the change in the p(success) the agent states from one action to the next. OmegaClaw computes no prediction error of its own.',need:'derived-pred',absentWhenOff:'Not in OmegaClaw. It computes no prediction error. Turn on predictions = true and the console derives surprise as the change in the agent\'s stated p(success) between steps.'},
+ {id:'action',group:'Play',label:'Action',source:'The reply the connector received (for OmegaClaw, its send skill call in the log) and the environment accepted (env.jsonl, kind action).',need:'env'},
+ {id:'receipt',group:'Play',label:'Receipt',source:'Environment adapter step(): the effect, for example "moved" or "the exit is locked".',need:'env'},
+ {id:'errors',group:'Play',label:'Errors and refusals',source:'Other agents: the error events they report, and failed calls. OmegaClaw: ALERT_FAILED, UNKNOWN_SKILL_CALL, MULTI_COMMAND_FAILURE and ERROR log lines. Environment: invalid actions, bumps and refusals.'},
+ {id:'chroma',group:'Play',label:'Memory writes and reads',source:'OmegaClaw skill calls: remember adds a Chroma memory and query reads memories, returning [time, content] pairs. Other agents: the memory events they report.',need:'omega'},
+ {id:'amend',group:'Play',label:'Memory amended or deleted',absent:'Not in OmegaClaw. No skill amends or deletes a memory. remember always adds a new item (petta_lib_chromadb uses a new uuid each time).'},
+ {id:'pin',group:'Play',label:'Working memory (pin)',source:'OmegaClaw pin skill calls. The pinned text reaches the prompt on the next turn, through HISTORY.',need:'omega'},
+ {id:'episodes',group:'Play',label:'Episodic history reads',source:'OmegaClaw episodes skill calls, which read memory/history.metta around a time.',need:'omega'},
+ {id:'tools',group:'Play',label:'Other tool calls',source:'OmegaClaw shell, file, websearch and plugin skill calls. Other agents: the tool events they report.',need:'omega'},
+ {id:'world',group:'Play',label:'World panel',source:'Environment adapter render(): a grid, pixels, tile map, question card or conversation timeline, showing only what the agent has been shown. Without a renderer, the transcript of what the agent was sent and replied.',need:'env'},
+ {id:'reported',group:'Play',label:'Concepts reported by the agent',source:'Concept frames an agent sends over the gateway ({"type":"trace","kind":"concepts"}). Agents other than OmegaClaw can send them; new ids show as dots, ids seen again as ticks.',need:'agenttrace'},
+ {id:'toolpolicy',group:'Outcome',label:'Tool rules',source:"The benchmark's tool rules, forbidden skills or an allowed list, checked against every skill call in the agent's log. A violation voids the episode.",need:'toolpolicy'},
+ {id:'judge',group:'Outcome',label:'Answers held for a judge',source:'Answers that only a judge can grade are held out of Solved and never counted as wrong. omegaeval judge records a verdict from a person or a judge command, and the record names the judge.',need:'env'},
+ {id:'evidence',group:'Provenance',label:'Evidence grade',source:"Docker logs are held by the Docker daemon, and the agent cannot write them. A log file can be written by the agent's own process.",need:'evidence'},
+ {id:'outcome',group:'Outcome',label:'Solved, utility, terminal status',source:'Environment adapter score(), on the privileged side.',need:'env'},
+ {id:'steps',group:'Outcome',label:'Steps and invalid actions',source:'Environment adapter.',need:'env'},
+ {id:'regret',group:'Outcome',label:'Extra steps over the oracle',source:'Environment adapter ceiling(), the oracle path length.',need:'ceiling'},
+ {id:'normalized',group:'Outcome',label:'Normalized outcome',source:'(utility − floor) ÷ (ceiling − floor). Floor and ceiling come from the adapter.',need:'env'},
+ {id:'tokens',group:'Cost',label:'Tokens per episode',source:'Sum of [LLM_USAGE] lines in the episode window.',need:'omega'},
+ {id:'cost',group:'Cost',label:'Cost in USD',source:'Tokens times the [prices] table in omegaeval.toml.',need:'cost'},
+ {id:'version',group:'Provenance',label:'Agent version',source:'The message "Omega version=…" that OmegaClaw sends when it starts (src/loop.metta, commChannelSend (version)).',need:'version'},
+ {id:'models',group:'Provenance',label:'Provider and model',source:'[LLM_USAGE] provider and model fields.',need:'omega'},
+ {id:'memfp',group:'Provenance',label:'Memory fingerprint at start and end',source:'history.metta size and sha256, and Chroma row counts, read-only through docker exec or the PeTTa root.',need:'memfp'},
+ {id:'worldmodel',group:'Compare',label:'World-model probe score',absent:'Not in OmegaClaw. It exposes no world-model probe. The map it builds lives only in prompt and memory text.'},
+ {id:'concepts',group:'Compare',label:'Concepts matched to hidden entities',absent:'Not in OmegaClaw. It has no concept export to score.'},
+ {id:'ablation',group:'Compare',label:'Ablation columns',source:'Runs of the same agent with a different --variant label. Config knobs OmegaClaw offers: model, provider, reasoningMode, maxOutputToken, maxHistory, maxFeedback, knowledge priors, fresh or carried memory.',need:'variants'},
+ {id:'ablation-off',group:'Compare',label:'Switching off PLN, memory or concepts',absent:'Not switchable by config in OmegaClaw. The metta skill is always on. maxRecallItems = 0 makes query raise an error in petta_lib_chromadb. Concept formation does not exist.'},
+ {id:'specialist',group:'Progress',label:'Trained specialist marker',absent:'No trained specialist is registered yet. Register one as an agent and run it through the gateway.'},
+];
+const F=Object.fromEntries(FIELDS.map(f=>[f.id,f]));
+function status(id,b,ctx={}){
+  const f=F[id];if(!f)return {ok:false,reason:'unknown field'};
+  if(f.absent)return {ok:false,absent:true,reason:f.absent};
+  if(f.need==='variants')return (ctx.variants||0)>1?{ok:true}:{ok:false,reason:'Only one variant of this agent has been run on this benchmark. Queue the same agent again with a --variant label, for example reasoningMode=low.'};
+  if(f.need==='derived-pred')return hasPred(b)?{ok:true,derived:true}:{ok:false,absent:true,reason:f.absentWhenOff};
+  if(!b)return {ok:false,reason:'No run selected.'};
+  switch(f.need){
+    case 'env':return hasEnv(b)?{ok:true}:{ok:false,reason:NO_ENV};
+    case 'omega':return hasOmega(b)?{ok:true}:{ok:false,reason:NO_OMEGA};
+    case 'raw':return !hasOmega(b)?{ok:false,reason:NO_OMEGA}:anyIter(b,it=>(it.llm||[]).some(u=>u.raw!=null))?{ok:true}:{ok:false,reason:'No [LLM_RAW] lines in this run. The agent logged at INFO. Start it with a DEBUG logging config for lib_llm_ext to capture raw completions.'};
+    case 'pred':return hasPred(b)?{ok:true}:{ok:false,reason:f.absentWhenOff};
+    case 'render':return (b.env||[]).some(e=>e.kind==='render')?{ok:true}:{ok:false,reason:hasEnv(b)?'This environment adapter has no renderer.':NO_ENV};
+    case 'ceiling':return b.result?.regret?.available===false?{ok:false,reason:b.result.regret.reason}:hasEnv(b)?{ok:true}:{ok:false,reason:NO_ENV};
+    case 'cost':{const c=b.result?.cost;return c&&c.available!==false?{ok:true}:{ok:false,reason:c?.reason||'No result yet.'}}
+    case 'version':{const v=b.manifest?.provenance?.agent_versions||{};return Object.values(v).some(Boolean)?{ok:true}:{ok:false,reason:'No "Omega version=" message reached the gateway in this run. Baseline agents do not send one.'}}
+    case 'memfp':{const m=b.manifest?.provenance?.memory_start||{};const on=Object.values(m).some(x=>x&&x.available);return on?{ok:true}:{ok:false,reason:(Object.values(m)[0]||{}).reason||'No memory location configured.'}}
+    case 'local':return LOCAL?{ok:true}:{ok:false,reason:'Needs the local harness (omegaeval serve). Exported bundles keep only an excerpt of each prompt.'};
+    case 'variants':return (ctx.variants||0)>1?{ok:true}:{ok:false,reason:'Only one variant of this agent has been run on this benchmark. Queue the same agent with --variant, for example reasoningMode=low.'};
+    case 'agenttrace':return (b.env||[]).some(e=>e.kind==='agent_trace'&&e.trace?.kind==='concepts')?{ok:true}:{ok:false,reason:Object.values(b.manifest?.members||{}).some(x=>x.kind==='omega')?F.atomspace.absent:'No agent reported concepts in this run.'};
+    case 'toolpolicy':{const tp=b.manifest?.environment?.tool_policy||{};return (tp.forbid||[]).length||(tp.allow||[]).length?{ok:true}:{ok:false,reason:'This benchmark sets no tool rules.'}}
+    case 'evidence':return Object.values(b.manifest?.members||{}).some(x=>x.evidence)?{ok:true}:{ok:false,reason:'Recorded from version 0.2 of the harness.'};
+  }
+  return {ok:true};
+}
+
+/* ============================== data ============================== */
+let LOCAL=false,STATE=null,LAST_SIG='';
+const RUNS=new Map();       // key -> bundle (full) or stub {stub:true,...}
+let RESULTS=[];             // [{run_id,attempt,identity,result,...}] for compare/progress
+let SEL=null,STACK='',TICK=0,ACTIVE_MEMBER=null,BENCH=store.get('oe5.bench',''),FORBID={forbid:new Set(),allow:null},OPENED=null;
+function ruleBroken(skill){return FORBID.forbid.has(skill)||(FORBID.allow!=null&&!FORBID.allow.has(skill))}
+function benchmarks(){
+  const m=new Map();
+  if(LOCAL&&STATE){
+    for(const [k,d] of Object.entries(STATE.environments||{}))m.set(k,{id:k,desc:d,label:d.label||k,name:d.name||'',runs:STATE.run_counts?.[k]?.runs||0});
+    for(const [k,c] of Object.entries(STATE.run_counts||{}))if(!m.has(k))m.set(k,{id:k,desc:{},label:k,name:'no longer installed',runs:c.runs});
+    for(const b of RUNS.values())if(b._origin==='file'){const id=b.manifest?.identity?.env;if(id&&!m.has(id))m.set(id,{id,desc:b.manifest?.environment||{},label:b.manifest?.benchmark?.label||id,name:b.manifest?.benchmark?.name||'',runs:0})}
+  }else for(const b of RUNS.values()){const id=b.manifest?.identity?.env;if(!id)continue;const bm=b.manifest?.benchmark||{},d=b.manifest?.environment||{};
+    if(!m.has(id))m.set(id,{id,desc:d,label:bm.label||d.label||id,name:bm.name||d.name||'',runs:0});m.get(id).runs++}
+  return [...m.values()].sort((a,b)=>a.label.localeCompare(b.label));
+}
+const inBench=b=>!BENCH||b.manifest?.identity?.env===BENCH;
+function addBundle(b,origin){
+  if(!b||!b.manifest)return;
+  if(b.kind==='log-import'){b.run_id=b.run_id==='import'?('import-'+(RUNS.size+1)):b.run_id}
+  b._origin=origin;RUNS.set(keyOf(b),b);
+}
+function resultsFromBundles(){
+  return [...RUNS.values()].filter(b=>!b.stub&&b.result&&b.manifest?.identity?.env).map(b=>({run_id:b.run_id,attempt:b.attempt,identity:b.manifest.identity,started_at:b.manifest.started_at,status:b.manifest.status,agent_versions:b.manifest.provenance?.agent_versions,models_seen:b.manifest.provenance?.models_seen,result:b.result}));
+}
+function ingest(obj,origin){
+  if(obj?.schema==='omegaeval.export/0')(obj.runs||[]).forEach(b=>addBundle(b,origin));
+  else if(Array.isArray(obj))obj.forEach(b=>addBundle(b,origin));
+  else addBundle(obj,origin);
+}
+async function api(path,opts){const r=await fetch(path,opts);if(!r.ok)throw new Error((await r.json().catch(()=>({}))).error||r.statusText);return r.json()}
+async function detectLocal(){
+  try{STATE=await api('/api/state');LOCAL=true}catch(e){LOCAL=false}
+  if(LOCAL){await refreshLocal(true);setInterval(()=>refreshLocal(false),2500)}
+}
+/* The harness sends one benchmark's runs at a time, newest first and at most PAGE of them, and
+   the console asks again only when the ledger grows or the selection changes. */
+const PAGE=500;const FULL=new Map();let LOADED_KEY='',RUN_TOTAL=0,RUNQ='',PROGRESS=[];
+const rowSig=r=>JSON.stringify([r.status,r.terminal,r.success,r.needs_judge,r.judged,r.void]);
+function stubOf(r){return {stub:true,run_id:r.run_id,attempt:r.attempt,row:r,manifest:{status:r.status,started_at:r.started_at,identity:{env:r.env,task:r.task,seed:r.seed,subject:r.subject,label:r.label,variant:r.variant}}}}
+async function refreshLocal(force){
+  try{
+    STATE=await api('/api/state');
+    const key=JSON.stringify([STATE.ledger_rev,BENCH,RUNQ]);
+    if(force||key!==LOADED_KEY){
+      const qs=new URLSearchParams({limit:String(PAGE)});if(BENCH)qs.set('env',BENCH);if(RUNQ)qs.set('q',RUNQ);
+      const page=await api('/api/runs?'+qs);RUN_TOTAL=page.total;
+      const next=new Map();for(const [k,b] of RUNS)if(b._origin==='file')next.set(k,b);
+      for(const r of page.rows){const k=`${r.run_id}/${r.attempt}`;const f=FULL.get(k);
+        if(f&&f._sig===rowSig(r)&&r.status!=='running')next.set(k,f);else{FULL.delete(k);next.set(k,stubOf(r))}}
+      if(SEL&&!next.has(SEL)&&RUNS.has(SEL))next.set(SEL,RUNS.get(SEL));
+      RUNS.clear();for(const [k,b] of next)RUNS.set(k,b);
+      CMP_ROWS.clear();
+      PROGRESS=await api('/api/progress'+(BENCH?'?'+new URLSearchParams({env:BENCH}):''));
+      LOADED_KEY=key;
+    }
+    const cur=RUNS.get(SEL);if(cur&&(cur.stub||cur.manifest?.status==='running'))await loadFull(SEL,true);
+    const sig=JSON.stringify([LOADED_KEY,[...RUNS.keys()].length,STATE.agents.map(a=>[a.id,a.connected,a.version,a.active]),STATE.jobs.map(j=>[j.id,j.state])]);
+    const selRunning=RUNS.get(SEL)?.manifest?.status==='running';
+    const typing=/SELECT|TEXTAREA/.test(document.activeElement?.tagName||'')||(document.activeElement?.tagName==='INPUT'&&document.activeElement.id!=='runq');
+    if((sig!==LAST_SIG||selRunning)&&!typing){LAST_SIG=sig;render(selRunning)}
+  }catch(e){console.warn(e)}
+}
+async function loadFull(k,force){
+  const cur=RUNS.get(k);if(!LOCAL||!k||(!force&&cur&&!cur.stub))return cur;
+  const [rid,att]=k.split('/');const b=await api(`/api/runs/${encodeURIComponent(rid)}/${encodeURIComponent(att)}`);
+  if(cur?.row)b._sig=rowSig(cur.row);addBundle(b,'local');FULL.set(k,b);return b;
+}
+let EMBED_META=null;
+function loadEmbedded(){
+  try{const obj=JSON.parse($('#embedded-runs').textContent);EMBED_META={harness:obj.harness,links:obj.links};ingest(obj,'embedded')}catch(e){console.warn('embedded data unreadable',e)}
+}
+/* drag and drop */
+let dragN=0;
+addEventListener('dragenter',e=>{e.preventDefault();dragN++;$('#drop').hidden=false});
+addEventListener('dragleave',e=>{dragN=Math.max(0,dragN-1);if(!dragN)$('#drop').hidden=true});
+addEventListener('dragover',e=>e.preventDefault());
+addEventListener('drop',async e=>{e.preventDefault();dragN=0;$('#drop').hidden=true;await readFiles(e.dataTransfer.files)});
+async function readFiles(files){
+  for(const f of files){
+    const text=await f.text();
+    try{ingest(JSON.parse(text),'file:'+f.name)}catch(_){
+      if(LOCAL){try{ingest(await api('/api/import-log?agent='+encodeURIComponent(f.name.replace(/\.[^.]+$/,'')),{method:'POST',body:text}),'file:'+f.name)}catch(err){alert('Could not import '+f.name+': '+err.message)}}
+      else alert(f.name+' is not a run bundle. Convert an Omega log first:\nomegaeval import-log '+f.name);
+    }
+  }
+  const newest=[...RUNS.keys()].pop();if(newest)SEL=newest;render(true);
+}
+
+/* ============================== derived timelines ============================== */
+function derive(b){
+  const env=b.env||[],obs={},act={},rec={},frames={},msgs=[],deliv={},concepts={};let term=null,start=null;
+  for(const e of env){
+    if(e.kind==='delivered')deliv[e.tick]=e;
+    else if(e.kind==='agent_trace'&&e.trace?.kind==='concepts'){(concepts[e.trace.step??-1]??=[]).push(e)}
+    else if(e.kind==='observation'){(obs[e.tick]??={})[e.to]=e}
+    else if(e.kind==='action')act[e.tick]=e;
+    else if(e.kind==='receipt')rec[e.tick]=e;
+    else if(e.kind==='render')frames[e.tick]=e.frame;
+    else if(e.kind==='agent_message')msgs.push(e);
+    else if(e.kind==='terminal')term=e;
+    else if(e.kind==='episode_start')start=e;
+  }
+  const ticks=Object.keys(obs).map(Number);const maxTick=ticks.length?Math.max(...ticks):-1;
+  const members=b.manifest?.identity?.members||Object.keys(b.agents||{});
+  const actor=b.manifest?.identity?.actor||members[0];
+  const tag=b.manifest?.ep_tag;
+  const per={};
+  for(const m of members){
+    const iters=(b.agents?.[m]?.iterations)||[];
+    if(iters.length){
+      let cur=null;
+      const cols=iters.map(it=>{
+        const tags=(it.ep_ticks||[]).filter(x=>!tag||x.ep===tag);
+        const read=tags.length?tags[tags.length-1].t:null;if(read!=null)cur=read;
+        const sends=(it.calls||[]).filter(c=>c.skill==='send');
+        const claim=sends.map(c=>c.tick_claim).find(x=>x!=null);
+        return {kind:'iter',it,tick:cur,read,act:claim??null,end:/ END\]/.test(it.human_msg||'')};
+      });
+      per[m]={mode:'omega',cols};
+    }else{
+      const cols=[];for(let t=0;t<=maxTick;t++)cols.push({kind:'tick',tick:t,read:t,act:act[t]&&act[t].agent===m?t:null});
+      per[m]={mode:'env',cols};
+    }
+  }
+  const preds={};for(const t in act)if(act[t].prediction!=null)preds[t]=act[t].prediction;
+  return {obs,act,rec,frames,msgs,term,start,per,members,actor,maxTick,preds,deliv,concepts};
+}
+
+/* ============================== header ============================== */
+let LABELS={};
+const runHash=rid=>{const s=String(rid||'');return s.slice(s.lastIndexOf('-')+1).slice(0,6)};
+function label(b){const id=b.manifest?.identity||{};if(b.kind==='log-import')return `log import · ${id.subject}`;return `${LABELS[id.env]||id.env} · ${id.subject||'?'}${id.variant?' ['+id.variant+']':''} · ${id.task} · seed ${id.seed} · ${runHash(b.run_id)}#${b.attempt}`}
+function renderLinks(){
+  const L=(LOCAL?STATE?.links:EMBED_META?.links)||{};const ver=LOCAL?STATE?.version:EMBED_META?.harness;
+  const items=[ver?`<span class="sub" data-tip="Version of the harness that ${LOCAL?'is serving this console':'exported these runs'}.">omegaeval ${esc(ver)}</span>`:'',
+    L.documentation?`<a href="${esc(L.documentation)}" target="_blank" rel="noopener">Docs</a>`:'',
+    L.repository?`<a href="${esc(L.repository)}" target="_blank" rel="noopener">Source</a>`:''];
+  $('#links').innerHTML=items.filter(Boolean).join('');
+}
+function renderHeader(){
+  const chip=$('#srcchip');
+  const origins=new Set([...RUNS.values()].map(b=>b._origin||(b.stub?'local':'')));
+  chip.className='src'+(LOCAL?' live':'');
+  const storeName=String(STATE?.store||'').split('/').filter(Boolean).slice(-2).join('/');
+  chip.querySelector('span').textContent=LOCAL?`local harness · ${storeName}`:(origins.has('embedded')&&RUNS.size?'embedded runs':RUNS.size?'files':'no data');
+  chip.dataset.tip=LOCAL?`Served by omegaeval serve.\nStore: ${STATE?.store||''}\nGateway port ${STATE?.gateway_port||''}`:origins.has('embedded')?'Runs embedded in this page by omegaeval export --html. Drop more exports to add them.':'Drop exports or bundles to load runs.';
+  renderLinks();
+  const list=benchmarks();if(BENCH&&!list.some(x=>x.id===BENCH))BENCH='';
+  LABELS=Object.fromEntries(list.map(x=>[x.id,x.label]));
+  $('#benchsel').innerHTML=`<option value="">all benchmarks</option>`+list.map(x=>`<option value="${esc(x.id)}" ${x.id===BENCH?'selected':''}>${esc(x.label)}${x.name&&x.name!==x.label?' · '+esc(x.name):''}${x.desc?.kind?' · '+esc(x.desc.kind):''} · ${fmt(x.runs)} run${x.runs===1?'':'s'}</option>`).join('');
+  $('#benchsel').parentElement.dataset.tip='Scopes Play, Compare, Progress and Runs to one benchmark. The label and name come from omegaeval.toml: label = "HLE", name = "Humanity\'s Last Exam". '+(LOCAL?'Lists every installed benchmark, with or without runs.':'Lists the benchmarks with runs in this page.');
+  const q=RUNQ.trim().toLowerCase();
+  const all=[...RUNS.values()].filter(inBench).filter(b=>LOCAL||!q||(label(b)+' '+b.run_id).toLowerCase().includes(q)).sort((a,b)=>String(b.manifest?.started_at||b.row?.started_at||'').localeCompare(String(a.manifest?.started_at||a.row?.started_at||'')));
+  const sel=$('#runsel');
+  if(!SEL||!RUNS.has(SEL))SEL=all[0]?keyOf(all[0]):null;
+  if(SEL&&!all.some(b=>keyOf(b)===SEL))SEL=all[0]?keyOf(all[0]):null;
+  sel.innerHTML=all.length?all.map(b=>`<option value="${esc(keyOf(b))}" ${keyOf(b)===SEL?'selected':''}>${esc(label(b))}${b.manifest?.status==='running'?' · running':''}</option>`).join(''):`<option>${BENCH?'no runs of '+esc(BENCH)+' yet':'no runs loaded'}</option>`;
+  sel.disabled=!all.length;
+  const shown=LOCAL?Math.min(RUN_TOTAL,PAGE):all.length;
+  sel.parentElement.dataset.tip=LOCAL&&RUN_TOTAL>PAGE?`Showing the ${fmt(PAGE)} most recent of ${fmt(RUN_TOTAL)} runs. Narrow the list with Find.`:`${fmt(shown)} run${shown===1?'':'s'}${q?' matching "'+RUNQ+'"':''}.`;
+  const cur=RUNS.get(SEL);const id=cur?.manifest?.identity||{};
+  const mates=all.filter(b=>keyOf(b)!==SEL&&b.manifest?.identity?.env===id.env&&b.manifest?.identity?.task===id.task&&b.manifest?.identity?.seed===id.seed);
+  const st=$('#stacksel');
+  if(STACK&&!mates.some(b=>keyOf(b)===STACK))STACK='';
+  st.innerHTML=`<option value="">none</option>`+mates.map(b=>`<option value="${esc(keyOf(b))}" ${keyOf(b)===STACK?'selected':''}>${esc(label(b))}</option>`).join('');
+  st.disabled=!mates.length;
+  st.parentElement.dataset.tip=mates.length?'Show another run of the same benchmark, task and seed underneath this one, step by step: for example this agent against last week\'s version, or against the oracle. It never mixes benchmarks.':'No other run of this benchmark, task and seed is loaded.';
+  $('#nruns').textContent=LOCAL?(RUN_TOTAL?fmt(RUN_TOTAL):''):(RUNS.size||'');
+}
+let RUNQ_T=null;
+$('#runq').addEventListener('input',e=>{clearTimeout(RUNQ_T);RUNQ_T=setTimeout(async()=>{RUNQ=e.target.value.trim();SEL=null;STACK='';OPENED=null;if(LOCAL)await refreshLocal(true);else render(true)},300)});
+$('#runsel').addEventListener('change',async e=>{SEL=e.target.value;TICK=0;ACTIVE_MEMBER=null;STACK='';OPENED=null;await loadFull(SEL);render(true)});
+$('#stacksel').addEventListener('change',async e=>{STACK=e.target.value;if(STACK)await loadFull(STACK);render(true)});
+$('#benchsel').addEventListener('change',async e=>{BENCH=e.target.value;store.set('oe5.bench',BENCH);SEL=null;TICK=0;ACTIVE_MEMBER=null;STACK='';OPENED=null;if(LOCAL)await refreshLocal(true);renderHeader();if(SEL)await loadFull(SEL);render(true)});
+
+/* ============================== nav ============================== */
+let VIEW=store.get('oe4.view','play');
+function show(v){VIEW=v;store.set('oe4.view',v);document.querySelectorAll('.rail button').forEach(b=>b.setAttribute('aria-selected',String(b.dataset.view===v)));document.querySelectorAll('.view').forEach(s=>s.hidden=s.id!=='view-'+v);render(false)}
+document.querySelectorAll('.rail button').forEach(b=>b.addEventListener('click',()=>show(b.dataset.view)));
+
+/* ============================== play ============================== */
+const LANES=[
+ {k:'obs',label:'Observation',field:'obs',h:20},
+ {k:'ctx',label:'Context in',field:'context',h:30},
+ {k:'llm',label:'LLM call',field:'llm',h:24},
+ {k:'nal',label:'Reasoning',field:'nalpln',h:20},
+ {k:'belief',label:'Belief p(success)',field:'belief',h:36},
+ {k:'act',label:'Action',field:'action',h:22},
+ {k:'err',label:'Errors · refusals',field:'errors',h:20},
+ {k:'mem',label:'Memory',field:'chroma',h:22},
+ {k:'atoms',label:'Atoms',field:'atoms',h:20},
+ {k:'surprise',label:'Surprise',field:'surprise',h:18},
+ {k:'concept',label:'Concepts',field:'reported',h:18},
+];
+function noTraceReason(b,m){
+  const kind=b.manifest?.members?.[m]?.kind;
+  if(kind==='baseline')return 'No OmegaClaw trace: '+m+' is a reference policy that plays through the gateway without an LLM or memory.';
+  const tap=b.manifest?.provenance?.log_taps?.[m];
+  if(tap&&tap.error)return 'No OmegaClaw trace for '+m+': '+tap.error+'.';
+  return NO_OMEGA;
+}
+function laneStatus(l,b,mode,m){
+  if(F[l.field]?.absent)return status(l.field,b);
+  if(mode==='env'&&['ctx','llm','nal','mem','atoms'].includes(l.k))return {ok:false,reason:noTraceReason(b,m||ACTIVE_MEMBER)};
+  return status(l.field,b);
+}
+function renderPlay(){
+  const v=$('#view-play');const b=RUNS.get(SEL);
+  if(!b){v.innerHTML=emptyState();return}
+  if(b.stub){v.innerHTML=`<div class="empty">Loading ${esc(SEL)}…</div>`;loadFull(SEL).then(()=>render(true));return}
+  const D=derive(b);const id=b.manifest.identity||{};
+  if(!ACTIVE_MEMBER||!D.members.includes(ACTIVE_MEMBER))ACTIVE_MEMBER=D.actor||D.members[0];
+  if(OPENED!==SEL){OPENED=SEL;const kind=b.manifest?.environment?.kind;const n=D.per[ACTIVE_MEMBER]?.cols?.length||1;
+    TICK=D.term&&(kind==='qa'||kind==='memory')?n-1:0}   // question sets open on the answer, games on the first step
+  const res=b.result||{};const oc=res.outcome||{};
+  const title=b.kind==='log-import'?`Log import · ${esc(id.subject)}`:`${esc(id.subject)} · ${esc(LABELS[id.env]||id.env)}/${esc(id.task)} · seed ${esc(id.seed)}`;
+  const outcome=b.kind==='log-import'?'':oc.available===false?`<span class="pill na" data-tip="${esc(oc.reason)}">${esc(b.manifest.status)}</span>`:
+    oc.void?`<span class="pill void" data-tip="${esc(oc.void_reason||'')}"><i></i>void · ${esc(oc.void_reason||'forbidden tool used')}</span>`:
+    oc.needs_judge?`<span class="pill judge" data-tip="${esc(oc.judge_reason||F.judge.source)}"><i></i>held for a judge</span>`:
+    oc.judged?`<span class="pill ${oc.success?'ok':'bad'}" data-tip="${esc(judgedTip(oc))}"><i></i>${oc.success?'correct':'wrong'} · judged by ${esc(oc.judged.by||'?')}</span>`:
+    `<span class="pill ${oc.success?'ok':'bad'}"><i></i>${oc.success?(id.env&&b.manifest?.environment?.kind!=='interactive'?'correct':'solved'):(oc.terminal==='answered'?'wrong answer':esc(String(oc.terminal||'').replace(/_/g,' ')))} · ${fmt(res.efficiency?.steps)} step${res.efficiency?.steps===1?'':'s'}</span>`;
+  v.innerHTML=`<div class="vh"><h1>${title}</h1>${outcome}<span class="sub">${b.kind==='log-import'?'An OmegaClaw log on its own: one column per loop turn. No benchmark, so the benchmark lanes are empty.':'One column per turn of the trace, or per step when there is no trace. Click a column or use ← →.'}</span></div>
+  <div class="playgrid"><div class="card world" id="world"></div><div id="strips" style="display:grid;gap:12px;min-width:0"></div></div>
+  <div class="card" id="detail"></div>`;
+  const strips=$('#strips');
+  for(const m of D.members)strips.appendChild(stripCard(b,D,m,false));
+  if(STACK){const s=RUNS.get(STACK);if(s&&!s.stub){const SD=derive(s);const sm=SD.actor||SD.members[0];strips.appendChild(stripCard(s,SD,sm,true))}}
+  renderWorld(b,D);renderDetail(b,D);
+}
+function emptyState(){
+  if(LOCAL)return `<div class="empty"><b>No runs in this store yet.</b> Queue an episode from the Runs view, or from a terminal:<pre class="cmd">omegaeval run oma-1 keydoor --task classic --seeds 1-5</pre>Reference runs need no agent:<pre class="cmd">omegaeval baseline random keydoor --seeds 1-5
+omegaeval baseline oracle keydoor --seeds 1-5</pre></div>`;
+  return `<div class="empty"><b>No runs loaded.</b> Drop a run bundle or an export here. Create one with <code>omegaeval export --out runs.json</code>. For an OmegaClaw log on its own, use <code>omegaeval import-log omega.log</code>. Serving this page with <code>omegaeval serve</code> reads the store directly and follows runs live.</div>`;
+}
+function colTick(D,c){return c.read!=null?c.read:c.tick}
+function stripCard(b,D,m,stacked){
+  const P=D.per[m];const mode=P.mode;const cols=P.cols;const kind=b.manifest?.members?.[m]?.kind;
+  const el=document.createElement('div');el.className='card strip-card';el.dataset.active=String(!stacked&&m===ACTIVE_MEMBER);
+  const cog=(b.result?.cognition||{})[m];
+  const pills=[];
+  if(mode==='omega'){const its=cols.length;const llm=sum(cols.map(c=>(c.it.llm||[]).length));pills.push(`<span class="pill">${its} loop turns</span>`,`<span class="pill">${llm} LLM calls</span>`);
+    const nal=sum(cols.map(c=>(c.it.calls||[]).filter(x=>x.engine==='nal'||x.engine==='pln').length));pills.push(`<span class="pill">${nal} NAL/PLN</span>`);
+    const mem=sum(cols.map(c=>(c.it.calls||[]).filter(x=>x.store==='chroma'&&x.op==='add').length));pills.push(`<span class="pill">${mem} memories written</span>`)}
+  else pills.push(`<span class="pill na" data-tip="${esc(cog?.reason||NO_OMEGA)}">no Omega trace</span>`);
+  const role=D.actor===m?'actor':'advisor';
+  el.innerHTML=`<div class="striphead"><span class="who">${esc(m)}<span class="mono">${esc(b.manifest?.members?.[m]?.label||kind||'')}</span></span>${D.members.length>1?`<span class="pill">${role}</span>`:''}${stacked?'<span class="pill">stacked</span>':''}<div class="pills">${pills.join('')}</div></div>
+  <div class="scroll"><svg class="strip" role="img" aria-label="Cognitive cycle for ${esc(m)}"></svg></div>
+  ${stacked?'':`<div class="scrub"><input type="range" min="0" max="${Math.max(0,cols.length-1)}" value="0" aria-label="Column for ${esc(m)}"><span class="t"></span></div>`}`;
+  const svg=el.querySelector('svg');drawStrip(svg,b,D,m,stacked);
+  svg.addEventListener('click',e=>{const r=svg.getBoundingClientRect();const x=(e.clientX-r.left)*(svg.viewBox.baseVal.width/r.width);const i=Math.floor((x-LX)/svg._cw);if(i>=0&&i<cols.length){if(!stacked)ACTIVE_MEMBER=m;TICK=i;refreshSelection()}});
+  const inp=el.querySelector('input');if(inp){inp.addEventListener('input',e=>{ACTIVE_MEMBER=m;TICK=+e.target.value;refreshSelection()})}
+  el._m=m;el._stacked=stacked;el._b=b;el._D=D;return el;
+}
+const LX=158;
+function drawStrip(svg,b,D,m,stacked){
+  const P=D.per[m];const cols=P.cols;const n=Math.max(cols.length,1);
+  const cw=Math.max(7,Math.min(18,900/n));svg._cw=cw;
+  const W=LX+n*cw+96;let y=22;const L={};
+  for(const l of LANES){L[l.k]={y,h:l.h,s:laneStatus(l,b,P.mode,m)};y+=l.h}
+  const H=y+6;const X=i=>LX+i*cw+cw/2;
+  let s=`<defs><pattern id="hatch" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="6" height="6" fill="var(--surface)"/><line x1="0" y1="0" x2="0" y2="6" stroke="var(--hatch)" stroke-width="2"/></pattern></defs>`;
+  LANES.forEach((l,i)=>{const o=L[l.k];s+=o.s.ok?`<rect class="bg ${i%2?'alt':''}" x="${LX}" y="${o.y}" width="${n*cw}" height="${o.h}"/>`:`<rect class="off-bg" x="${LX}" y="${o.y}" width="${n*cw}" height="${o.h}" data-tip="${esc(l.label+': '+o.s.reason)}"/>`;
+    s+=`<text class="lab ${o.s.ok?'':'off'}" x="${LX-10}" y="${o.y+o.h/2+4}" text-anchor="end" data-tip="${esc(l.label+'\n'+(o.s.ok?'Source: '+(F[l.field].source||''):'Not available: '+o.s.reason))}">${esc(l.label)}${o.s.ok?'':' ·'}</text>`});
+  const step=n>60?10:n>20?5:1;for(let i=0;i<n;i+=step)s+=`<text class="tick" x="${X(i)}" y="14" text-anchor="middle">${P.mode==='omega'?(cols[i].it.i):cols[i].tick}</text>`;
+  s+=`<text class="tick" x="${LX-10}" y="14" text-anchor="end">${P.mode==='omega'?'loop turn':'step'}</text>`;
+  // events: terminal and refusals
+  const markEv=(i,t)=>{s+=`<line class="evl" x1="${X(i)}" y1="18" x2="${X(i)}" y2="${H-4}"/><text class="evt" x="${X(i)+3}" y="${H+8}">${esc(t)}</text>`};
+  cols.forEach((c,i)=>{
+    const x=X(i);const tk=colTick(D,c);
+    const obsE=c.read!=null?(D.obs[c.read]||{})[m]:null;
+    if(L.obs.s.ok&&(c.read!=null||(c.kind==='iter'&&c.it.human_msg))){const txt=obsE?obsE.text:(c.it?.human_msg||'');const info=obsE&&obsE.info;s+=`<rect x="${x-3}" y="${L.obs.y+7}" width="6" height="6" rx="1" fill="${info?'var(--surface)':c.read!=null?'var(--better)':'var(--line-2)'}" stroke="var(--better)" stroke-width="${info?1.5:0}" data-tip="${esc((c.read!=null?(info?'step '+c.read+' information read, no reply expected':'step '+c.read+' read'):'message read')+'\n'+txt.slice(0,600))}"/>`}
+    if(c.kind==='iter'){
+      const it=c.it;
+      if(L.ctx.s.ok&&it.prompt){const p=it.prompt;const hmax=L.ctx.h-6;const hh=Math.max(2,Math.min(hmax,Math.sqrt(p.chars||0)/12));const sec=p.sections||{};
+        s+=`<rect x="${x-cw*0.35}" y="${L.ctx.y+L.ctx.h-3-hh}" width="${cw*0.7}" height="${hh}" fill="var(--ink-2)" opacity=".55" data-tip="${esc('loop turn '+it.i+' · prompt '+fmt(p.chars)+' chars\n'+Object.entries(sec).map(([k,v])=>k+': '+fmt(v)).join('\n')+((it.llm||[])[0]?.prompt_tokens!=null?'\nprompt tokens '+fmt(it.llm[0].prompt_tokens)+' (cached '+fmt(it.llm[0].cached_tokens)+')':''))}"/>`}
+      if(L.llm.s.ok)(it.llm||[]).forEach((u,j)=>{const r=u.completion_tokens!=null?Math.max(2.5,Math.min(cw*0.45,1.5+Math.sqrt(u.completion_tokens)/6)):3;
+        s+=`<circle cx="${x}" cy="${L.llm.y+L.llm.h/2}" r="${r}" fill="${u.finish_reason==='length'?'var(--crit)':'var(--llm)'}" data-tip="${esc('LLM call · '+(u.provider||'?')+'/'+(u.model||'?')+'\nfinish '+(u.finish_reason??'—')+'\nprompt '+fmt(u.prompt_tokens)+' · cached '+fmt(u.cached_tokens)+'\ncompletion '+fmt(u.completion_tokens)+' · reasoning '+fmt(u.reasoning_tokens)+(u.usage_logged===false?'\n(no [LLM_USAGE] line: tokens unknown)':''))}"/>`});
+      const metta=(it.calls||[]).filter(c2=>c2.skill==='metta');
+      if(L.nal.s.ok)metta.forEach((c2,j)=>{const col=c2.engine==='pln'||c2.engine==='nal'?'var(--pln)':'none';
+        s+=`<rect x="${x-3.5}" y="${L.nal.y+6+j*2}" width="7" height="7" fill="${col}" stroke="var(--pln)" data-tip="${esc((c2.engine||'metta').toUpperCase()+' · '+(c2.args[0]||'').slice(0,300)+(c2.conclusions?'\n→ '+c2.conclusions.map(k=>k.term+' <'+k.f+', '+k.c+'>').join('\n→ '):'')+(c2.result?.kind==='error'?'\nerror '+c2.result.error:''))}"/>`});
+      if(L.atoms.s.ok){const pr=sum(metta.map(c2=>(c2.premises||[]).length)),co=sum(metta.map(c2=>(c2.conclusions||[]).length));if(pr||co)s+=`<text x="${x}" y="${L.atoms.y+14}" text-anchor="middle" font-size="9.5" font-family="var(--mono)" fill="var(--ink-2)" data-tip="${esc(pr+' premise atoms in, '+co+' conclusions out, loop turn '+it.i)}">${pr}›${co}</text>`}
+      const sends=(it.calls||[]).filter(c2=>c2.skill==='send'),tools=(it.calls||[]).filter(c2=>c2.lane==='tool');
+      if(L.act.s.ok||P.mode==='omega'){sends.forEach(c2=>{const a=c2.tick_claim!=null?D.act[c2.tick_claim]:null;const txt=(c2.args[0]||'');const g=glyph(a?.action||txt);
+        s+=`<text x="${x}" y="${L.act.y+16}" text-anchor="middle" font-family="var(--mono)" font-size="12" font-weight="600" fill="${a?(a.valid?'var(--accent)':'var(--crit)'):'var(--ink-2)'}" data-tip="${esc('send "'+txt.slice(0,300)+'"'+(a?'\naccepted as step '+a.tick+': '+(a.action||'not an action')+(a.valid?'':' (invalid)')+'\neffect: '+((D.rec[a.tick]||{}).effect||'—'):c2.tick_claim!=null?'\nno matching step (stale or after the end)':''))}">${g}</text>`});
+        tools.forEach((c2,j)=>{s+=`<rect x="${x-cw*0.3}" y="${L.act.y+L.act.h-4-j*3}" width="${cw*0.6}" height="2" fill="var(--muted)" data-tip="${esc(c2.skill+' '+(c2.args||[]).join(' ').slice(0,200))}"/>`})}
+      const errs=(it.errors||[]);if(L.err.s.ok&&errs.length)s+=`<rect x="${x-3}" y="${L.err.y+6}" width="6" height="8" fill="var(--crit)" data-tip="${esc(errs.map(e=>e.type+': '+(e.text||'').slice(0,160)).join('\n'))}"/>`;
+      if(L.mem.s.ok)(it.calls||[]).filter(c2=>c2.lane==='memory').forEach((c2,j)=>{const cy=L.mem.y+L.mem.h/2,cx=x+(j%2?2:-2);const t=esc(c2.store+' '+c2.op+'\n'+(c2.args[0]||'').slice(0,300)+(c2.result?.kind==='items'?'\n→ '+c2.result.items.length+' items: '+c2.result.items.slice(0,3).map(z=>z[0]+' '+z[1].slice(0,80)).join(' | '):''));
+        if(c2.store==='chroma')s+=`<circle cx="${cx}" cy="${cy}" r="3.4" fill="${c2.op==='add'?'var(--mem)':'var(--surface)'}" stroke="var(--mem)" stroke-width="1.5" data-tip="${t}"/>`;
+        else if(c2.store==='working')s+=`<rect x="${cx-3}" y="${cy-1.5}" width="6" height="3" fill="var(--ink-2)" data-tip="${t}"/>`;
+        else s+=`<rect x="${cx-3}" y="${cy-3}" width="6" height="6" transform="rotate(45 ${cx} ${cy})" fill="var(--surface)" stroke="var(--mem)" data-tip="${t}"/>`});
+      if(c.end)markEv(i,'END read');
+    }else{
+      const a=c.act!=null?D.act[c.act]:null;
+      if(L.act.s.ok&&a)s+=`<text x="${x}" y="${L.act.y+16}" text-anchor="middle" font-family="var(--mono)" font-size="12" font-weight="600" fill="${a.valid?'var(--accent)':'var(--crit)'}" data-tip="${esc('step '+a.tick+': '+(a.action||a.text)+'\neffect: '+((D.rec[a.tick]||{}).effect||'—'))}">${glyph(a.action||a.text)}</text>`;
+    }
+    const ra=c.act!=null?D.rec[c.act]:null;
+    if(L.err.s.ok&&ra&&/bump|locked|not an available|nothing to|no exit/.test(ra.effect||''))s+=`<rect x="${x-3}" y="${L.err.y+6}" width="6" height="8" fill="var(--warn)" data-tip="${esc('step '+c.act+': '+ra.effect)}"/>`;
+  });
+  // belief line from predictions, placed at the column that sent the action
+  if(L.belief.s.ok){const pts=[];cols.forEach((c,i)=>{if(c.act!=null&&D.preds[c.act]!=null)pts.push([X(i),L.belief.y+L.belief.h-4-D.preds[c.act]*(L.belief.h-8),D.preds[c.act],c.act])});
+    if(pts.length)s+=`<polyline fill="none" stroke="var(--ink)" stroke-width="1.5" points="${pts.map(p=>p[0]+','+p[1]).join(' ')}"/>`+pts.map(p=>`<circle cx="${p[0]}" cy="${p[1]}" r="2.2" fill="var(--surface)" stroke="var(--ink)" data-tip="step ${p[3]}: p(success) = ${p[2]}"/>`).join('')}
+  if(L.surprise.s.ok){let prev=null;cols.forEach((c,i)=>{if(c.act==null||D.preds[c.act]==null)return;const p=D.preds[c.act];if(prev!=null){const d=Math.abs(p-prev);const hh=Math.max(1,d*(L.surprise.h-4));s+=`<rect x="${X(i)-cw*0.35}" y="${L.surprise.y+L.surprise.h-2-hh}" width="${cw*0.7}" height="${hh}" fill="${d>=0.25?'var(--crit)':'var(--warn)'}" data-tip="step ${c.act}: stated p(success) moved ${fmt(d,2)} (from ${fmt(prev,2)} to ${fmt(p,2)})"/>`}prev=p})}
+  if(L.concept.s.ok){const seen=new Set(),drawn=new Set();cols.forEach((c,i)=>{const tk=colTick(D,c);if(tk==null||drawn.has(tk))return;const fr=(D.concepts[tk]||[]).filter(e=>e.agent===m);if(!fr.length)return;drawn.add(tk);
+    const ids=fr.flatMap(e=>(e.trace.concepts||[]).map(k=>String(k.id)));const fresh=[...new Set(ids.filter(x=>!seen.has(x)))];const again=[...new Set(ids.filter(x=>seen.has(x)))];ids.forEach(x=>seen.add(x));
+    if(fresh.length)s+=`<circle cx="${X(i)}" cy="${L.concept.y+L.concept.h/2}" r="${Math.min(cw*0.45,2.5+fresh.length)}" fill="var(--accent)" data-tip="${esc('step '+tk+': new '+fresh.join(', '))}"/>`;
+    if(again.length)s+=`<line x1="${X(i)+(fresh.length?4:0)}" y1="${L.concept.y+3}" x2="${X(i)+(fresh.length?4:0)}" y2="${L.concept.y+L.concept.h-3}" stroke="var(--ink-2)" stroke-width="1.5" data-tip="${esc('step '+tk+': seen again '+again.join(', '))}"/>`})}
+  if(D.term&&!stacked){const lastAct=cols.map((c,i)=>c.act!=null?i:-1).filter(i=>i>=0).pop();if(lastAct!=null&&lastAct>=0){const oc=b.result?.outcome||{};markEv(lastAct,oc.void?'void':oc.judged?'judged '+(oc.success?'correct':'wrong'):D.term.status.replace(/_/g,' '))}}
+  svg._H=H;svg.setAttribute('viewBox',`0 0 ${W} ${H+14}`);svg.setAttribute('width',W);svg.setAttribute('height',H+14);svg.innerHTML=s+`<g class="selg"></g>`;
+}
+function glyph(t){t=String(t||'');if(/move N\b/.test(t))return '↑';if(/move E\b/.test(t))return '→';if(/move S\b/.test(t))return '↓';if(/move W\b/.test(t))return '←';if(/\bpick/.test(t))return '◉';if(/\bopen/.test(t))return '⌂';return '•'}
+function refreshSelection(){
+  document.querySelectorAll('.strip-card').forEach(card=>{const svg=card.querySelector('svg');const D=card._D;const P=D.per[card._m];const g=svg.querySelector('.selg');const cw=svg._cw;
+    card.dataset.active=String(!card._stacked&&card._m===ACTIVE_MEMBER);
+    let i=TICK;if(card._stacked||card._m!==ACTIVE_MEMBER){const active=RUNS.get(SEL);const AD=derive(active);const ac=AD.per[ACTIVE_MEMBER]?.cols?.[TICK];const tk=ac?colTick(AD,ac):null;i=P.cols.findIndex(c=>colTick(D,c)===tk);if(i<0)i=null}
+    g.innerHTML=i==null?'':`<rect class="sel" x="${LX+i*cw}" y="18" width="${cw}" height="${svg._H-18}"/><line class="selline" x1="${LX+i*cw+cw/2}" y1="18" x2="${LX+i*cw+cw/2}" y2="${svg._H-4}"/>`;
+    const inp=card.querySelector('input');if(inp&&card._m===ACTIVE_MEMBER){inp.value=TICK;const c=P.cols[TICK];card.querySelector('.t').textContent=c?(P.mode==='omega'?`loop turn ${c.it.i}${c.read!=null?' · step '+c.read:''}`:`step ${c.tick}`):''}});
+  const b=RUNS.get(SEL);if(b&&!b.stub){const D=derive(b);renderWorld(b,D);renderDetail(b,D)}
+}
+const ARC=['#000000','#0074D9','#FF4136','#2ECC40','#FFDC00','#AAAAAA','#F012BE','#FF851B','#7FDBFF','#870C25','#FFFFFF','#555555','#3D9970','#B10DC9','#01FF70','#39CCCC'];
+const TILE_COLORS=['#5b7a99','#7a9a5b','#a8905b','#8a6fa8','#a86f6f','#5ba8a0','#9a9a9a','#c9a227','#4f6d7a','#b07d4f'];
+function renderWorld(b,D){
+  const el=$('#world');if(!el)return;
+  const c=D.per[ACTIVE_MEMBER]?.cols?.[TICK];const tk=c?colTick(D,c):null;
+  if(!hasEnv(b)){el.innerHTML=`<h2>World</h2><div class="sub">${esc(NO_ENV)}</div>`;return}
+  let t=tk??0;
+  const nCols=D.per[ACTIVE_MEMBER]?.cols?.length||1;
+  if(D.term&&TICK>=nCols-1){const ft=Object.keys(D.frames).map(Number);if(ft.length)t=Math.max(t,...ft)}   // last column: the final state
+  while(t>0&&!D.frames[t])t--;const fr=D.frames[t];
+  const metrics=D.term?.score?.metrics||{};const done=!!D.term;
+  const head=(title,sub)=>`<h2>${title}</h2><div class="sub" data-tip="${esc(F.world.source)}">${sub}</div>`;
+  if(!fr||!['grid','pixels','tiles','card','timeline'].includes(fr.type)){
+    el.innerHTML=head(`Transcript · step ${fmt(tk??0)}`,fr?`Unknown frame type ${esc(fr.type)}, so this is exactly what the agent was sent and replied.`:'This benchmark has no renderer, so this is exactly what the agent was sent and what it replied.')+transcript(b,D,tk??0);
+    const cur=el.querySelector('.m.cur');if(cur)cur.scrollIntoView({block:'nearest'});return}
+  if(fr.type==='grid'){
+    const rows=fr.rows;const nC=rows[0].length;const sz=Math.max(14,Math.min(26,250/nC));
+    let h='';rows.forEach((row,r)=>[...row].forEach((ch,cc)=>{const ag=fr.agent&&fr.agent[0]===r&&fr.agent[1]===cc;const cls=ag?'a':({'?':'q','#':'w','.':'s','v':'v','K':'k','E':'e'})[ch]||'s';h+=`<div class="c ${cls}">${ag?'●':ch==='K'?'K':ch==='E'?'E':''}</div>`}));
+    const seen=rows.join('').replace(/\?/g,'').length,all=rows.join('').length;
+    el.innerHTML=head(`World · step ${fmt(t)}`,'What the agent has seen by this step. Dashed cells are unseen.')+
+    `<div class="grid" style="grid-template-columns:repeat(${nC},${sz}px);grid-auto-rows:${sz}px">${h}</div>
+    <div class="wstats"><div><small>Cells seen</small><b>${seen} / ${all}</b></div><div><small>Holding key</small><b>${fr.has_key?'yes':'no'}</b></div>
+    <div data-tip="${esc(F.steps.source)}"><small>Step</small><b>${fmt(t)} / ${fmt(D.term?.max_steps??b.manifest?.identity?.budgets?.max_steps)}</b></div>
+    <div data-tip="${esc(status('belief',b).ok?F.belief.source:status('belief',b).reason)}"><small>Belief now</small><b class="${status('belief',b).ok?'':'na'}">${D.preds[t-1]!=null?D.preds[t-1]:status('belief',b).ok?'—':'not stated'}</b></div></div>`;
+    return}
+  if(fr.type==='pixels'){
+    const rows=(fr.rows||[]).map(r=>typeof r==='string'?[...r].map(ch=>parseInt(ch,16)):r);const H=rows.length,W=H?rows[0].length:0;const pal=fr.palette||ARC;const k=Math.max(1,Math.floor(260/Math.max(W,H,1)));
+    el.innerHTML=head(`Frame · step ${fmt(t)}`,`The ${W} × ${H} frame the agent was shown${fr.palette?'':', in the ARC palette'}.`)+`<canvas width="${W*k}" height="${H*k}" aria-label="Game frame"></canvas>`;
+    const cx=el.querySelector('canvas').getContext('2d');rows.forEach((row,y)=>row.forEach((v,x)=>{cx.fillStyle=pal[v]||'#888';cx.fillRect(x*k,y*k,k,k)}));return}
+  if(fr.type==='tiles'){
+    const rows=fr.rows||[];const nC=rows[0]?.length||0;const sz=Math.max(10,Math.min(22,260/Math.max(nC,1)));const cols=fr.colors||{};const chars=[...new Set(rows.join(''))];
+    const colorOf=ch=>cols[ch]||(ch==='?'||ch===' '?'var(--surface-2)':TILE_COLORS[chars.indexOf(ch)%TILE_COLORS.length]);
+    const marks=new Map((fr.marks||[]).map(m=>[m.r+','+m.c,m.label]));
+    let h='';rows.forEach((row,r)=>[...row].forEach((ch,cc)=>{const mk=marks.get(r+','+cc);h+=`<div style="background:${colorOf(ch)}" ${mk?`data-tip="${esc(mk)}"`:''}>${mk?esc(String(mk).slice(0,1)):''}</div>`}));
+    const legend=Object.entries(fr.legend||{}).map(([ch,lab])=>`<span><i style="display:inline-block;width:10px;height:10px;border-radius:2px;background:${colorOf(ch)};vertical-align:-1px;margin-right:4px"></i>${esc(lab)}</span>`).join('');
+    el.innerHTML=head(`Map · step ${fmt(t)}`,'Tiles the agent can see; unseen tiles are blank.')+`<div class="tiles" style="grid-template-columns:repeat(${nC},${sz}px);grid-auto-rows:${sz}px">${h}</div>${legend?`<div class="legend">${legend}</div>`:''}`;return}
+  if(fr.type==='card'){
+    const picked=metrics.picked,gold=done?metrics.gold:null,letters='ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+    const ch=(fr.choices||[]).map((c,i)=>`<li class="${done&&picked===letters[i]?'picked':''} ${done&&gold===letters[i]?'gold':''}">${letters[i]}. ${esc(c)}</li>`).join('');
+    const verdict=!done?'':verdictPill(b);
+    el.innerHTML=head(`Question${fr.title&&fr.title!=='all'?' · '+esc(fr.title):''}`,done?'After the episode: the gold answer is revealed from the privileged record.':'What the agent was asked. The gold answer appears once the episode ends.')+
+    `<div class="qcard"><div class="q">${esc(fr.question)}</div>${ch?`<ol>${ch}</ol>`:''}<div><div class="sub">Agent's answer</div><div class="ans">${fr.answer!=null?esc(fr.answer):'<span class="na">not answered yet</span>'}</div></div>${done&&gold!=null?`<div><div class="sub">Gold answer</div><div class="ans">${esc(gold)}</div></div>`:''}${verdict?`<div>${verdict} <span class="sub">${esc(gradeNote(b,metrics))}</span></div>`:''}</div>`;return}
+  if(fr.type==='timeline'){
+    const ev=new Set(done?(metrics.evidence_sessions||[]):[]);
+    const mem={};for(const cc of (D.per[ACTIVE_MEMBER]?.cols||[])){if(cc.kind!=='iter'||cc.tick==null)continue;for(const call of (cc.it.calls||[])){if(call.store==='chroma'){(mem[cc.tick]??={add:0,read:0})[call.op==='add'?'add':'read']++}}}
+    const items=fr.items.map((it,k)=>{const m=mem[k];const mtxt=m?`${m.add?m.add+' remembered':''}${m.add&&m.read?' · ':''}${m.read?m.read+' queried':''}`:'';
+      return `<div class="it ${it.delivered?'done':''} ${k===fr.current?'cur':''} ${ev.has(k)?'ev':''}" ${ev.has(k)?'data-tip="Holds the evidence for the answer (privileged, shown after the episode)."':''}><i></i><span>${esc(it.label)}${it.date?` <span class="sub">${esc(it.date)}</span>`:''}${it.kind==='question'&&it.answer?`<div class="ans mono">${esc(it.answer)}</div>`:''}</span><span class="mem" data-tip="Chroma memory calls the agent made while reading this message, from its log.">${esc(mtxt)}</span></div>`}).join('');
+    const hasMem=Object.keys(mem).length>0;
+    el.innerHTML=head(`Conversations · ${fr.items.filter(i=>i.delivered).length} of ${fr.items.length} delivered`,
+      `Filled squares were delivered and read.${done?' A green edge marks the conversations that hold the evidence.':''} ${hasMem?'Purple counts are the memory calls the agent made while reading each one.':status('chroma',b).ok?'':'Memory calls appear here when the agent has a log tap.'}`)+
+      `<div class="tl">${items}</div>${done?`<div class="qcard" style="margin-top:8px"><div class="sub">Question</div><div class="q">${esc(fr.question||'')}</div><div class="sub">Gold answer</div><div class="ans">${esc(metrics.gold??'')}</div><div>${verdictPill(b)} <span class="sub">${esc(gradeNote(b,metrics))}</span></div></div>`:''}`;return}
+}
+function answerKind(b){const k=b.manifest?.environment?.kind||STATE?.environments?.[b.manifest?.identity?.env]?.kind;return k==='qa'||k==='memory'}
+function judgedTip(o){const j=o.judged||{};return `Judged ${j.verdict||''} by ${j.by||'?'}${j.via==='command'?' (a judge command)':''}${j.at?' on '+String(j.at).slice(0,10):''}.${j.reason?' '+j.reason:''}${j.judgments>1?` ${j.judgments} verdicts recorded${j.unanimous?', all agree':', they disagree; the latest counts'}.`:''}`}
+function gradeNote(b,metrics){const o=b.result?.outcome||{};return o.void?(o.void_reason||''):o.judged?judgedTip(o):(metrics.grading||'')}
+function verdictPill(b){
+  const o=b.result?.outcome||{};
+  if(o.void)return `<span class="pill void" data-tip="${esc(o.void_reason||'')}"><i></i>void</span>`;
+  if(o.needs_judge)return `<span class="pill judge" data-tip="${esc(o.judge_reason||'')}"><i></i>held for a judge</span>`;
+  if(o.judged)return `<span class="pill ${o.success?'ok':'bad'}" data-tip="${esc(judgedTip(o))}"><i></i>${o.success?'correct':'wrong'} · judged</span>`;
+  if(o.success===true)return '<span class="pill ok"><i></i>correct</span>';
+  if(o.success===false)return '<span class="pill bad"><i></i>wrong</span>';
+  return '<span class="pill na">not graded yet</span>';
+}
+function transcript(b,D,upto){
+  const m=ACTIVE_MEMBER;let h='';
+  for(let t=0;t<=Math.max(D.maxTick,upto);t++){const o=(D.obs[t]||{})[m];if(!o)continue;
+    h+=`<div class="m ${t===upto?'cur':''}"><span class="sub">step ${t}${o.info?' · information':''}</span><pre>${esc(o.text)}</pre></div>`;
+    const a=D.act[t];if(a&&a.agent===m)h+=`<div class="m reply ${t===upto?'cur':''}"><span class="sub">${esc(m)} replied</span><pre>${esc(a.text)}</pre><span class="sub">${esc((D.rec[t]||{}).effect||'')}</span></div>`}
+  return `<div class="tscript">${h||'<div class="na">No messages yet.</div>'}</div>`;
+}
+function offCard(title,reason){return `<div class="tc off"><h3>${esc(title)}</h3><div>${esc(reason)}</div></div>`}
+function renderDetail(b,D){
+  const el=$('#detail');if(!el)return;const m=ACTIVE_MEMBER;const P=D.per[m];const c=P?.cols?.[TICK];
+  {const tp=b.manifest?.environment?.tool_policy||{};FORBID={forbid:new Set(tp.forbid||[]),allow:tp.allow?new Set([...tp.allow,'send']):null}}
+  if(!c){el.innerHTML='<h2>Nothing selected</h2>';return}
+  const obsE=c.read!=null?(D.obs[c.read]||{})[m]:null;
+  const cards=[];
+  cards.push(obsE?`<div class="tc"><h3>Observation · step ${c.read}</h3><pre>${esc(obsE.text)}</pre></div>`:c.kind==='iter'&&c.it.human_msg?`<div class="tc"><h3>Message read</h3><pre>${esc(c.it.human_msg)}</pre></div>`:`<div class="tc"><h3>Observation</h3><div class="na">No new message this turn.</div></div>`);
+  if(c.kind==='iter'){
+    const it=c.it;const p=it.prompt;
+    if(!p)cards.push(offCard('Context in',c.it.source==='reported'?'The agent reported no context for this turn.':'No prompt this turn. The loop was idle or the line is missing from the log.'));
+    else{const sec=p.sections||{};const mx=Math.max(1,...Object.values(sec));
+      cards.push(`<div class="tc"><h3>Context in · ${fmt(p.chars)} chars</h3><div class="bars">${Object.entries(sec).map(([k,v])=>`<span>${esc(k)}</span><i style="width:${Math.max(2,v/mx*100)}%"></i><span class="mono">${fmt(v)}</span>`).join('')}</div>
+      ${p.input?`<pre>${esc(p.input.slice(0,1200))}</pre>`:''}${p.last_results&&p.last_results!=='()'?`<div class="sub" style="margin-top:6px">LAST_SKILL_USE_RESULTS${p.last_results_truncated?' (first 4,000 chars)':''}</div><pre>${esc(p.last_results)}</pre>`:''}
+      ${status('fullprompt',b).ok&&p.line!=null?`<button class="btn" style="margin-top:6px" data-line="${p.line}" data-agent="${esc(m)}">Load full prompt</button><pre hidden class="full"></pre>`:`<div class="sub na" style="margin-top:6px" data-tip="${esc(status('fullprompt',b).reason||'')}">Full prompt: ${p.redacted?'removed from this export':'local harness only'}</div>`}</div>`)}
+    const u=(it.llm||[]);
+    if(!u.length)cards.push(offCard('LLM call','No LLM call this turn.'));
+    else cards.push(`<div class="tc"><h3>LLM call${u.length>1?'s':''}</h3>${u.map(x=>`<div class="kv"><span>model</span><span class="mono">${esc((x.provider||'?')+'/'+(x.model||'?'))}</span><span>finish</span><span class="mono">${esc(x.finish_reason??'—')}</span><span>prompt</span><span class="mono">${fmt(x.prompt_tokens)} (cached ${fmt(x.cached_tokens)})</span><span>completion</span><span class="mono">${fmt(x.completion_tokens)}</span><span>reasoning</span><span class="mono">${fmt(x.reasoning_tokens)}</span></div>${x.raw!=null?`<pre>${esc(String(x.raw).slice(0,3000))}</pre>`:`<div class="sub na" style="margin-top:6px" data-tip="${esc(F.rawcompletion.source)}">Raw completion: not logged at INFO</div>`}`).join('')}
+      <div class="sub na" style="margin-top:6px" data-tip="${esc(F.reasoningtext.absent)}">Reasoning text: not available from the provider</div></div>`);
+    const calls=it.calls||[];
+    cards.push(calls.length?`<div class="tc"><h3>Skill calls · ${calls.length}</h3>${calls.map(callHtml).join('')}</div>`:offCard('Skill calls','None this turn.'));
+    const errs=(it.errors||[]).concat(it.warnings||[]);
+    if(errs.length)cards.push(`<div class="tc"><h3>Errors · warnings</h3>${errs.map(e=>`<div><span class="badge error">${esc(e.type)}</span>${esc((e.text||'').slice(0,300))}</div>`).join('')}</div>`);
+  }else{
+    cards.push(offCard('Context, LLM, skill calls',noTraceReason(b,m)));
+  }
+  const a=c.act!=null?D.act[c.act]:null;
+  if(a){const r=D.rec[a.tick]||{};cards.push(`<div class="tc"><h3>Action → receipt · step ${a.tick}</h3><div class="kv"><span>sent</span><span class="mono">${esc(a.text)}</span><span>parsed</span><span class="mono">${esc(a.action||'not an action')}</span><span>valid</span><span>${a.valid?'yes':'<b style="color:var(--crit)">no</b>'}</span><span>effect</span><span>${esc(r.effect||'—')}</span>${a.prediction!=null?`<span>p(success)</span><span class="mono">${a.prediction}</span>`:''}</div></div>`)}
+  else if(hasEnv(b))cards.push(`<div class="tc"><h3>Action</h3><div class="na">No action this ${c.kind==='iter'?'turn':'step'}.</div></div>`);
+  const tkc=colTick(D,c);const cf=(D.concepts[tkc]||[]).filter(e=>e.agent===m);
+  if(cf.length)cards.push(`<div class="tc"><h3>Concepts reported · step ${tkc}</h3>${cf.map(e=>`<div class="mono">${(e.trace.concepts||[]).map(k=>esc(k.id)+(k.label&&k.label!==k.id?' ('+esc(k.label)+')':'')).join(', ')}</div>`).join('')}</div>`);
+  else cards.push(offCard('Concepts',status('reported',b).ok?'No concepts reported at this step.':status('reported',b).reason));
+  el.innerHTML=`<h2>${c.kind==='iter'?`Loop turn ${c.it.i}${c.read!=null?' · step '+c.read:''}`:`Step ${c.tick}`} · ${esc(m)}</h2><div class="sub">${c.kind==='iter'?esc((c.it.t0||'')+(c.it.t_source==='docker'?' (docker clock)':c.it.t_source==='reported'?' (when the harness received the report)':' (agent clock, 1 s resolution)')):''}</div><div class="tcards">${cards.join('')}</div>`;
+  el.querySelectorAll('button[data-line]').forEach(btn=>btn.addEventListener('click',async()=>{const pre=btn.nextElementSibling;btn.disabled=true;try{const r=await api(`/api/runs/${b.run_id}/${b.attempt}/raw/${encodeURIComponent(btn.dataset.agent)}/${btn.dataset.line}`);pre.textContent=r.line||'(line not found)';pre.hidden=false}catch(e){pre.textContent=e.message;pre.hidden=false}btn.disabled=false}));
+}
+function callHtml(c){
+  const lane=c.lane||'tool';const res=c.result;let r='';
+  if(res){if(res.kind==='items')r=`<pre>${esc(res.items.map(x=>x[0]+'  '+x[1]).join('\n').slice(0,2000))}</pre>`;
+    else if(res.kind==='error')r=`<div><span class="badge error">${esc(res.error)}</span>${esc((res.text||'').slice(0,300))}</div>`;
+    else r=`<div class="mono na">→ ${esc((res.text||res.kind||'').slice(0,400))}</div>`}
+  const tv=p=>esc(p.term)+(p.f!=null?' &lt;'+esc(p.f)+', '+esc(p.c)+'&gt;':'');
+  const pc=c.premises?.length?`<div class="mono">premises: ${c.premises.map(tv).join('; ')}</div>`:'';
+  const cc=c.conclusions?.length?`<div class="mono">conclusions: ${c.conclusions.map(tv).join('; ')}</div>`:'';
+  return `<div class="call">${ruleBroken(c.skill)?'<span class="badge error" data-tip="This benchmark\'s tool rules do not allow this skill; using it voids the episode.">not allowed</span>':''}<span class="badge ${esc(lane)}">${esc(c.store?c.store+' '+c.op:c.engine||lane)}</span><b class="mono">${esc(c.skill)}</b> <span class="mono">${esc((c.args||[]).join(' ').slice(0,400))}</span>${pc}${cc}${r}</div>`;
+}
+document.addEventListener('keydown',e=>{if(VIEW!=='play'||/INPUT|SELECT|TEXTAREA/.test(e.target.tagName))return;const b=RUNS.get(SEL);if(!b||b.stub)return;const D=derive(b);const n=D.per[ACTIVE_MEMBER]?.cols?.length||0;
+  if(e.key==='ArrowRight'){TICK=Math.min(n-1,TICK+1);refreshSelection();e.preventDefault()}if(e.key==='ArrowLeft'){TICK=Math.max(0,TICK-1);refreshSelection();e.preventDefault()}});
+
+/* ============================== compare ============================== */
+function allResults(){return LOCAL?RESULTS:resultsFromBundles()}
+/* In local mode the sets come from the harness's per-set totals, and each set's runs are fetched
+   only when it is shown, so comparing never needs every result in the store. */
+const CMP_ROWS=new Map();
+const setKey=s=>[s.env,s.task,s.subject,s.variant||''].join('|');
+function compareSets(){
+  if(!LOCAL)return setsOf(allResults()).filter(s=>!BENCH||s.env===BENCH);
+  return PROGRESS.filter(s=>!BENCH||s.env===BENCH).map(s=>({key:setKey(s),env:s.env,task:s.task,subject:s.subject,variant:s.variant||'',n:s.n,rows:CMP_ROWS.get(setKey(s))}));
+}
+const CMP_PENDING=new Map();
+async function loadSetRows(list){
+  await Promise.all(list.filter(s=>s&&!s.rows).map(async s=>{
+    if(!CMP_PENDING.has(s.key))CMP_PENDING.set(s.key,api('/api/results?'+new URLSearchParams({env:s.env,task:s.task,subject:s.subject,variant_is:s.variant})).finally(()=>CMP_PENDING.delete(s.key)));
+    const rows=await CMP_PENDING.get(s.key);CMP_ROWS.set(s.key,rows);s.rows=rows}));
+}
+function setsOf(rows){const m=new Map();for(const r of rows){const id=r.identity||{};const k=[id.env,id.task,id.subject,id.variant||''].join('|');if(!m.has(k))m.set(k,{key:k,env:id.env,task:id.task,subject:id.subject,variant:id.variant||'',label:id.label,rows:[]});m.get(k).rows.push(r)}return [...m.values()]}
+const setName=s=>{const n=s.n??s.rows.length;return `${s.subject}${s.variant?' ['+s.variant+']':''} · ${LABELS[s.env]||s.env}/${s.task} · ${fmt(n)} run${n===1?'':'s'}`};
+const cogSum=(r,f)=>{const c=r.result?.cognition||{};const vals=Object.values(c).filter(x=>x&&x.available!==false);return vals.length?sum(vals.map(f)):null};
+const METRICS=[
+ {k:'solved',label:'Solved',unit:'episodes graded; judge-held ones are left out',field:'outcome',get:r=>{const o=r.result?.outcome;if(!o||o.available===false||o.success==null)return null;return o.success?1:0},agg:'sum',better:'higher'},
+ {k:'judge',label:'Held for a judge',unit:'episodes',field:'judge',get:r=>r.result?.outcome?.available===false?null:(r.result?.outcome?.needs_judge?1:0),agg:'sum',better:null},
+ {k:'judged',label:'Graded by a judge',unit:'episodes',field:'judge',get:r=>r.result?.outcome?.available===false?null:(r.result?.outcome?.judged?1:0),agg:'sum',better:null},
+ {k:'void',label:'Void: tool rule broken',unit:'episodes',field:'toolpolicy',get:r=>r.result?.outcome?.available===false?null:(r.result?.outcome?.void?1:0),agg:'sum',better:'lower'},
+ {k:'steps',label:'Steps',unit:'median per episode',field:'steps',get:r=>r.result?.efficiency?.steps,agg:'median',better:'lower'},
+ {k:'extra',label:'Extra steps over oracle',unit:'median, solved only',field:'regret',get:r=>r.result?.regret?.extra_steps,agg:'median',better:'lower'},
+ {k:'invalid',label:'Invalid actions',unit:'median',field:'steps',get:r=>r.result?.efficiency?.invalid_actions,agg:'median',better:'lower'},
+ {k:'llm',label:'LLM calls',unit:'median per episode',field:'llm',get:r=>cogSum(r,c=>c.llm_calls),agg:'median',better:'lower'},
+ {k:'tokens',label:'Tokens',unit:'median prompt + completion',field:'tokens',get:r=>cogSum(r,c=>c.tokens&&c.tokens.available!==false?(c.tokens.prompt_tokens||0)+(c.tokens.completion_tokens||0):0),agg:'median',better:'lower'},
+ {k:'nal',label:'Reasoning calls',unit:'median per episode, NAL, PLN or reported',field:'nalpln',get:r=>cogSum(r,c=>Object.entries(c.reasoning||{}).filter(([k])=>k!=='llm').reduce((a,[,v])=>a+(v||0),0)),agg:'median',better:null},
+ {k:'mem',label:'Memories written',unit:'median per episode',field:'chroma',get:r=>cogSum(r,c=>c.memory?.chroma?.add||0),agg:'median',better:null},
+ {k:'err',label:'Loop errors',unit:'median per episode',field:'errors',get:r=>cogSum(r,c=>sum(Object.values(c.errors||{}))),agg:'median',better:'lower'},
+ {k:'cost',label:'Cost',unit:'USD, median',field:'cost',get:r=>r.result?.cost?.available===false?null:r.result?.cost?.usd,agg:'median',better:'lower',d:3},
+ {k:'brier',label:'Prediction Brier score',unit:'median, lower is better',field:'belief',get:r=>r.result?.prediction?.available===false?null:r.result?.prediction?.brier,agg:'median',better:'lower',d:3},
+];
+let CMP_A=store.get('oe4.cmpA',''),CMP_B=store.get('oe4.cmpB','');
+function renderCompare(){
+  const v=$('#view-compare');
+  if(LOCAL&&!BENCH){v.innerHTML=`<div class="vh"><h1>Compare</h1></div><div class="empty">Pick a benchmark at the top. Comparisons are between runs of the same benchmark and task.</div>`;return}
+  const sets=compareSets();
+  if(sets.length<1){v.innerHTML=`<div class="vh"><h1>Compare</h1></div><div class="empty">${RUNS.size?'No finished benchmark episodes loaded.':emptyState()}</div>`;return}
+  if(!sets.find(s=>s.key===CMP_A))CMP_A=sets[0].key;
+  const A=sets.find(s=>s.key===CMP_A);
+  const peers=sets.filter(s=>s.key!==A.key&&s.env===A.env&&s.task===A.task);
+  if(!peers.find(s=>s.key===CMP_B))CMP_B=peers[0]?.key||'';
+  const B=peers.find(s=>s.key===CMP_B);
+  const variants=sets.filter(s=>s.subject===A.subject&&s.env===A.env&&s.task===A.task);
+  const need=[...new Map([A,B,...variants].filter(s=>s&&!s.rows).map(s=>[s.key,s])).values()];
+  if(need.length){v.innerHTML=`<div class="vh"><h1>Compare</h1></div><div class="empty">Loading the runs of ${esc(setName(A))}${B?' and '+esc(setName(B)):''}…</div>`;
+    loadSetRows(need).then(()=>{if(VIEW==='compare')renderCompare()}).catch(e=>{v.innerHTML=`<div class="vh"><h1>Compare</h1></div><div class="empty na">Could not load runs: ${esc(e.message)}</div>`});return}
+  const opt=(list,cur)=>list.map(s=>`<option value="${esc(s.key)}" ${s.key===cur?'selected':''}>${esc(setName(s))}</option>`).join('');
+  const seedsA=new Map(A.rows.map(r=>[r.identity.seed,r])),seedsB=B?new Map(B.rows.map(r=>[r.identity.seed,r])):new Map();
+  const matched=[...seedsA.keys()].filter(s=>seedsB.has(s)).sort((x,y)=>x-y);
+  const rowsHtml=METRICS.map(mt=>{
+    const st=status(mt.field,{env:[{kind:'observation'}],agents:{x:{iterations:[{}]}},result:A.rows[0]?.result,manifest:{}});
+    const va=A.rows.map(mt.get),vb=B?B.rows.map(mt.get):[];
+    const has=va.some(x=>x!=null)||vb.some(x=>x!=null);
+    if(!has){const reason=mt.field==='belief'?F.belief.absentWhenOff:mt.field==='cost'?(A.rows[0]?.result?.cost?.reason||F.cost.source):['llm','tokens','nalpln','chroma'].includes(mt.field)?'Neither side has an OmegaClaw trace. Baseline agents have none.':mt.field==='regret'?'No solved episodes, or no oracle in this environment.':'Not recorded.';
+      return `<tr class="off"><td>${esc(mt.label)}<div class="sub">${esc(mt.unit)}</div></td><td class="v">—</td><td class="v">—</td><td></td><td><span class="why" data-tip="${esc(reason)}">not available</span></td></tr>`}
+    const why=(set)=>['llm','tokens','nalpln','chroma','errors'].includes(mt.field)?(set.subject.startsWith('baseline-')?'No OmegaClaw trace: '+set.subject+' is a reference policy.':'No OmegaClaw trace in these runs.'):mt.field==='regret'?'No solved episodes in this set, so no extra steps to report.':'Not recorded for this set.';
+    const agg=(list,set)=>list.every(x=>x==null)?`<span class="why na" data-tip="${esc(why(set))}">—</span>`:mt.agg==='sum'?`${sum(list.filter(x=>x!=null))} / ${list.filter(x=>x!=null).length}`:fmt(median(list),mt.d||0);
+    let marks='';let better=0,worse=0;
+    if(B&&matched.length){marks=`<div class="seeds">${matched.map(sd=>{const a=mt.get(seedsA.get(sd)),bb=mt.get(seedsB.get(sd));if(a==null||bb==null)return `<i class="none" data-tip="seed ${sd}: not recorded on one side"></i>`;const d=a-bb;let cls='same';if(mt.better&&d!==0){const good=mt.better==='higher'?d>0:d<0;cls=good?'better':'worse';good?better++:worse++}return `<i class="${cls}" data-tip="seed ${sd}: ${fmt(a,mt.d||0)} vs ${fmt(bb,mt.d||0)}"></i>`}).join('')}</div>`}
+    const ma=median(va),mb=median(vb);let reads='';
+    if(B&&ma!=null&&mb!=null){if(mt.agg==='sum'){const d=sum(va.filter(x=>x!=null))-sum(vb.filter(x=>x!=null));reads=d===0?'same count':`${d>0?d+' more':(-d)+' fewer'}`}else{const d=ma-mb;reads=d===0?'no difference':`${fmt(Math.abs(d),mt.d||0)} ${d>0?'more':'fewer'}`}}
+    const cls=mt.better&&B?(better>worse?'better':worse>better?'worse':''):'';
+    return `<tr><td>${esc(mt.label)}<div class="sub">${esc(mt.unit)}</div></td><td class="v">${agg(va,A)}</td><td class="v">${B?agg(vb,B):'—'}</td><td>${marks}</td><td class="reads ${cls}">${esc(reads)}</td></tr>`}).join('');
+  const vs=status('ablation',null,{variants:variants.length});
+  v.innerHTML=`<div class="vh"><h1>Compare</h1><span class="sub">Two sets of runs on the same benchmark and task. Marks are per seed, on seeds both sides ran.</span></div>
+  <div class="card"><div class="pickers"><label class="field"><span>A</span><select id="cmpA">${opt(sets,A.key)}</select></label><label class="field"><span>B</span><select id="cmpB" ${peers.length?'':'disabled'}>${peers.length?opt(peers,CMP_B):'<option>no other set on this benchmark and task</option>'}</select></label><span class="sub">${B?`${matched.length} matched seed${matched.length===1?'':'s'}`:''}</span></div></div>
+  <div class="card scroll"><table class="t"><thead><tr><th>Metric</th><th>A</th><th>B</th><th>Per seed, A against B</th><th>Reads as</th></tr></thead><tbody>${rowsHtml}</tbody></table>
+  <div class="legend"><span><i class="seeds"><i class="better"></i></i> A better on that seed</span><span><i class="seeds"><i class="worse"></i></i> A worse</span><span><i class="seeds"><i class="same"></i></i> same</span><span><i class="seeds"><i class="none"></i></i> not recorded</span></div></div>
+  <div class="card"><h2>Ablation</h2><div class="sub">Runs of ${esc(A.subject)} on this benchmark with a different --variant label, side by side.</div>
+  ${vs.ok?ablationTable(variants):`<div class="empty"><span class="na">${esc(vs.reason)}</span><div class="sub" style="margin-top:6px">${esc(F.ablation.source)}</div><div class="sub" style="margin-top:4px">${esc(F['ablation-off'].absent)}</div></div>`}</div>
+  <div class="card"><h2>Not measurable on OmegaClaw today</h2><div class="sub">Shown so nobody reads an empty column as zero.</div><table class="t"><tbody>${['worldmodel','concepts','atomspace','surprise','reasoningtext','amend'].map(k=>`<tr class="off"><td>${esc(F[k].label)}</td><td>${esc(F[k].absent||F[k].absentWhenOff)}</td></tr>`).join('')}</tbody></table></div>`;
+  $('#cmpA').addEventListener('change',e=>{CMP_A=e.target.value;store.set('oe4.cmpA',CMP_A);renderCompare()});
+  const cb=$('#cmpB');if(cb)cb.addEventListener('change',e=>{CMP_B=e.target.value;store.set('oe4.cmpB',CMP_B);renderCompare()});
+}
+function ablationTable(variants){
+  const cols=variants;const rows=METRICS.filter(m=>['solved','steps','llm','tokens','err','cost'].includes(m.k));
+  return `<div class="scroll"><table class="t"><thead><tr><th>Metric</th>${cols.map(c=>`<th>${esc(c.variant||'no variant')}</th>`).join('')}</tr></thead><tbody>${rows.map(mt=>`<tr><td>${esc(mt.label)}</td>${cols.map(c=>{const vals=c.rows.map(mt.get);return `<td class="v">${vals.every(x=>x==null)?'<span class="na">—</span>':mt.agg==='sum'?sum(vals.filter(x=>x!=null))+' / '+vals.filter(x=>x!=null).length:fmt(median(vals),mt.d||0)}</td>`}).join('')}</tr>`).join('')}</tbody></table></div>`;
+}
+
+/* ============================== progress ============================== */
+/* Solve counts per set of runs and per agent version: from the harness in local mode, from the
+   loaded runs otherwise. Same shape either way. */
+function aggregateSets(rows){
+  const sets=new Map();
+  for(const r of rows){const id=r.identity||{};const k=[id.env,id.task,id.subject,id.variant||''].join('|');
+    if(!sets.has(k))sets.set(k,{env:id.env,task:id.task,subject:id.subject,variant:id.variant||'',n:0,graded:0,solved:0,_steps:[],first:r.started_at,_v:new Map()});
+    const s=sets.get(k);const ver=Object.values(r.agent_versions||{}).find(Boolean)||'version not reported';
+    if(!s._v.has(ver))s._v.set(ver,{version:ver,n:0,graded:0,solved:0,_steps:[],first:r.started_at});
+    for(const t of [s,s._v.get(ver)]){t.n++;const ok=r.result?.outcome?.success;if(ok!=null){t.graded++;if(ok)t.solved++}
+      const st=r.result?.efficiency?.steps;if(st!=null)t._steps.push(st);if(String(r.started_at||'')<String(t.first||'~'))t.first=r.started_at}}
+  return [...sets.values()].map(s=>({...s,median_steps:median(s._steps),versions:[...s._v.values()].map(v=>({...v,median_steps:median(v._steps)}))}));
+}
+function progressSets(){return LOCAL?PROGRESS:aggregateSets(resultsFromBundles().filter(r=>!BENCH||r.identity?.env===BENCH))}
+function renderProgress(){
+  const v=$('#view-progress');const sets=progressSets().filter(s=>!BENCH||s.env===BENCH);
+  if(!sets.length){v.innerHTML=`<div class="vh"><h1>Progress</h1></div><div class="empty">${emptyState()}</div>`;return}
+  const games=new Map();for(const s of sets){const k=s.env+'/'+s.task;if(!games.has(k))games.set(k,[]);games.get(k).push(s)}
+  let html=`<div class="vh"><h1>Progress</h1><span class="sub">For each benchmark: solve rate of every set of runs, between the random floor and the oracle ceiling where those have been run.</span></div>`;
+  for(const [g,list] of games){
+    const rate=s=>s.graded?s.solved/s.graded:null;
+    const floor=list.find(s=>s.subject==='baseline-random'),ceil=list.find(s=>s.subject==='baseline-oracle');
+    const others=list.filter(s=>!s.subject.startsWith('baseline-'));
+    const L=60,R=700,Wd=760,y=52,pos=x=>L+x*(R-L);
+    let s=`<line class="track" x1="${L}" y1="${y}" x2="${R}" y2="${y}"/>`;
+    [0,.25,.5,.75,1].forEach(t=>{s+=`<line class="gl" x1="${pos(t)}" y1="${y-10}" x2="${pos(t)}" y2="${y+10}"/><text class="bv" x="${pos(t)}" y="${y+46}" text-anchor="middle">${Math.round(t*100)}%</text>`});
+    const mark=(st,shape,color,lab,dy)=>{const r=rate(st);if(r==null)return;const x=pos(r);const med=st.median_steps;
+      s+=shape==='sq'?`<rect x="${x-5}" y="${y-5}" width="10" height="10" fill="var(--surface)" stroke="var(--ink-2)" stroke-width="1.5" data-tip="${esc(lab+': solved '+Math.round(r*100)+'% of '+st.graded+', median '+fmt(med)+' steps')}"/>`:shape==='di'?`<path d="M${x},${y-7} l7,7 l-7,7 l-7,-7z" fill="var(--good)" data-tip="${esc(lab+': solved '+Math.round(r*100)+'% of '+st.graded+', median '+fmt(med)+' steps')}"/>`:`<circle cx="${x}" cy="${y}" r="6" fill="${color}" stroke="var(--surface)" stroke-width="1.5" data-tip="${esc(lab+': solved '+Math.round(r*100)+'% of '+st.graded+', median '+fmt(med)+' steps')}"/>`;
+      s+=`<text class="bl" x="${x}" y="${y+dy}" text-anchor="middle">${esc(lab)}</text>`};
+    if(floor)mark(floor,'sq',null,'random floor',24);if(ceil)mark(ceil,'di',null,'oracle',24);
+    others.forEach((o,i)=>mark(o,'c','var(--accent)',o.subject+(o.variant?' ['+o.variant+']':''),-14-(i%3)*13));
+    const missing=[!floor&&'random floor',!ceil&&'oracle ceiling'].filter(Boolean);
+    html+=`<div class="card"><h2>${esc((LABELS[g.split('/')[0]]||g.split('/')[0])+' / '+g.split('/')[1])}</h2><div class="sub">Solve rate across seeds. ${missing.length?`<span class="na">Not run yet: ${missing.join(', ')}. Run <span class="code">omegaeval baseline ${!floor?'random':'oracle'} ${esc(g.split('/')[0])} --task ${esc(g.split('/')[1])} --seeds 1-5</span>.</span>`:''} <span class="na why" data-tip="${esc(F.specialist.absent)}">No trained specialist.</span></div><div class="scroll"><svg class="band" viewBox="-10 0 ${Wd+20} 104" role="img" aria-label="Solve rates for ${esc(g)}">${s}</svg></div></div>`;
+  }
+  const vers=sets.filter(s=>!String(s.subject||'').startsWith('baseline-')).flatMap(s=>s.versions.map(v=>({subject:s.subject,variant:s.variant,env:s.env,task:s.task,ver:v.version,first:v.first,n:v.n,graded:v.graded,solved:v.solved,median_steps:v.median_steps}))).sort((a,b)=>String(b.first).localeCompare(String(a.first)));
+  html+=`<div class="card"><h2>Ledger by agent version</h2><div class="sub">Grouped by the version string each agent announced when it connected. Newest first.</div>${vers.length?`<div class="scroll"><table class="t"><thead><tr><th>Agent</th><th>Benchmark</th><th>Version</th><th>First run</th><th>Episodes</th><th>Solved</th><th>Median steps</th></tr></thead><tbody>${vers.map(e=>`<tr><td>${esc(e.subject)}${e.variant?' ['+esc(e.variant)+']':''}</td><td>${esc((LABELS[e.env]||e.env)+' / '+e.task)}</td><td class="v">${esc(e.ver)}</td><td class="v">${esc(String(e.first||'').slice(0,16).replace('T',' '))}</td><td class="v">${fmt(e.n)}</td><td class="v">${fmt(e.solved)} / ${fmt(e.graded)}</td><td class="v">${fmt(e.median_steps)}</td></tr>`).join('')}</tbody></table></div>`:`<div class="empty na">No OmegaClaw runs yet. Baseline runs are shown on the bands above.</div>`}</div>`;
+  v.innerHTML=html;
+}
+
+/* ============================== runs ============================== */
+function renderRuns(){
+  const v=$('#view-runs');
+  const rows=[...RUNS.values()].filter(inBench).sort((a,b)=>String(b.manifest?.started_at||b.row?.started_at||'').localeCompare(String(a.manifest?.started_at||a.row?.started_at||'')));
+  let html=`<div class="vh"><h1>Runs</h1><span class="sub">${LOCAL?(RUN_TOTAL>PAGE?`The ${fmt(PAGE)} most recent of ${fmt(RUN_TOTAL)} attempts${BENCH?' of '+esc(LABELS[BENCH]||BENCH):''}${RUNQ?' matching "'+esc(RUNQ)+'"':''}, from the append-only ledger. Narrow with Find, or select from the command line with omegaeval export ${esc(BENCH||'hle')} subject=...`:`${fmt(RUN_TOTAL)} attempt${RUN_TOTAL===1?'':'s'}${BENCH?' of '+esc(LABELS[BENCH]||BENCH):''}${RUNQ?' matching "'+esc(RUNQ)+'"':''}, from the append-only ledger.`):'Runs loaded into this page.'}</span></div>`;
+  if(LOCAL&&STATE){
+    const subjects=[...STATE.agents.map(a=>({id:a.id,kind:'agent',on:a.connected,version:a.version,active:a.active,label:a.label})),...STATE.hives.map(h=>({id:h.id,kind:'hive',on:h.members.every(m=>STATE.agents.find(a=>a.id===m)?.connected),label:h.members.join(', ')}))];
+    const envs=STATE.environments;const firstEnv=Object.keys(envs)[0]||'';
+    html+=`<div class="card"><h2>Start episodes</h2><div class="sub">Sends the benchmark's brief and first message to the agent's chat channel. It plays until it finishes, runs out of steps, or goes quiet for ${fmt(STATE.protocol.step_timeout_s)} s.</div>
+    <div class="form"><label>Agent or hive<select id="f-subj">${subjects.map(s=>`<option value="${esc(s.id)}">${s.on?'● ':'○ '}${esc(s.id)} (${s.kind}${s.on?'':', offline'})</option>`).join('')}</select></label>
+    <label>Benchmark<select id="f-env">${Object.entries(envs).map(([k,d])=>`<option value="${esc(k)}" ${k===BENCH?'selected':''} ${d.error?'disabled':''}>${esc(d.label||k)}${d.name&&d.name!==d.label?' · '+esc(d.name):''}${(d.label||k)!==k?' ('+esc(k)+')':''}${d.error?' (broken)':''}</option>`).join('')}</select></label>
+    <label>Task<select id="f-task"></select></label><label>Seeds<input id="f-seeds" value="1-5"></label>
+    <label>Variant<input id="f-var" placeholder="e.g. reasoningMode=low"></label>
+    <label>Memory<select id="f-mem"><option value="carry">carry over (developmental)</option><option value="fresh">fresh (reset before)</option></select></label>
+    <button class="btn primary" id="f-go">Queue</button></div><div class="sub" id="f-msg" style="margin-top:8px"></div></div>
+    <div class="card"><h2>Agents</h2><div class="sub">Connection to the gateway on port ${fmt(STATE.gateway_port)}. An agent joins by starting OmegaClaw with commchannel=websocket. Print its command with <span class="code">omegaeval connect &lt;agent&gt;</span>.</div>
+    <div class="scroll"><table class="t"><thead><tr><th>Agent</th><th>Kind</th><th>Reached over</th><th>Status</th><th>Version it announced</th><th>Log source</th><th>Memory</th><th>Now</th></tr></thead><tbody>${STATE.agents.map(a=>`<tr><td>${esc(a.id)}<div class="sub">${esc(a.label||'')}</div></td><td>${esc(a.kind)}</td><td>${esc(a.transport||'websocket')}</td><td><span class="dot ${a.connected?'on':''}"></span>${a.transport&&a.transport!=='websocket'?(a.last_error?'last call failed':'ready'):(a.connected?'connected':'offline')}</td><td class="v">${esc(a.version||'—')}</td><td class="v">${esc(a.logs?JSON.stringify(a.logs):'none')}</td><td class="v">${esc(a.memory?JSON.stringify(a.memory):'none')}</td><td class="v">${esc(a.active||'')}</td></tr>`).join('')}</tbody></table></div></div>`;
+    html+=`<div class="card"><h2>Benchmarks</h2><div class="sub">Everything installed, and where it comes from. Add one with <span class="code">omegaeval new-benchmark &lt;name&gt;</span>, a file in the benchmarks folder, an installed package, or an [environments] block with a data file.</div>
+    <div class="scroll"><table class="t"><thead><tr><th>Benchmark</th><th>Kind</th><th>World panel</th><th>Scoring</th><th>Tool rules</th><th>From</th></tr></thead><tbody>${Object.entries(envs).map(([k,d])=>`<tr class="${d.error?'off':''}"><td>${esc(d.label||k)}${(d.label||k)!==k?' <span class="sub mono">'+esc(k)+'</span>':''}<div class="sub">${esc(d.error||d.name||'')}</div></td><td>${esc(d.kind||'—')}</td><td>${esc(d.renderer||'transcript')}</td><td>${esc(d.scoring||'—')}</td><td>${esc(d.tool_policy?.allow?'only '+d.tool_policy.allow.join(', '):(d.tool_policy?.forbid||[]).length?'no '+d.tool_policy.forbid.join(', '):'none')}</td><td class="sub">${esc(d.origin||'')}</td></tr>`).join('')}</tbody></table></div></div>`;
+    const jobs=STATE.jobs.filter(j=>j.state!=='done').slice(-20);
+    if(jobs.length)html+=`<div class="card"><h2>Queue</h2><table class="t"><tbody>${jobs.map(j=>`<tr><td>${esc(j.id)}</td><td>${esc(j.subject)}</td><td>${esc(j.env)}/${esc(j.task)} seed ${esc(j.seed)}</td><td>${esc(j.state)}</td><td class="na">${esc(j.error||'')}</td></tr>`).join('')}</tbody></table></div>`;
+  }
+  html+=`<div class="card"><div class="row" style="justify-content:space-between"><h2>Attempts</h2><label class="btn">Open files<input type="file" id="f-files" multiple accept=".json,.log,.txt" hidden></label></div>
+  <div class="sub">${LOCAL?'Drop an Omega log to view it on its own. It is parsed by the harness.':'Drop exports or bundles made with omegaeval export or import-log.'}</div>
+  ${rows.length?`<div class="scroll"><table class="t"><thead><tr><th>Started</th><th>Agent</th><th>Benchmark</th><th>Seed</th><th>Status</th><th>Steps</th><th>Attempt</th></tr></thead><tbody>${rows.map(b=>{const id=b.manifest?.identity||{};const res=b.result?.outcome;const row=b.row||{};const ok=res?res.success:row.success;const st=b.manifest?.status||row.status;
+    return `<tr class="click" data-k="${esc(keyOf(b))}"><td class="v">${esc(String(b.manifest?.started_at||row.started_at||'').slice(0,19).replace('T',' '))}</td><td>${esc(id.subject||'')}${id.variant?' ['+esc(id.variant)+']':''}</td><td>${esc(LABELS[id.env]||id.env||'—')}/${esc(id.task||'')}</td><td class="v">${esc(id.seed??'')}</td><td>${st==='running'?'<span class="pill warn"><i></i>running</span>':(res?.void||row.void)?'<span class="pill void"><i></i>void</span>':(res?.needs_judge||row.needs_judge)?'<span class="pill judge"><i></i>held for a judge</span>':ok==null?esc(st||''):ok?`<span class="pill ok"><i></i>${answerKind(b)?'correct':'solved'}${res?.judged||row.terminal==='judged'?' · judged':''}</span>`:res?.judged||row.terminal==='judged'?'<span class="pill bad"><i></i>wrong · judged</span>':'<span class="pill bad"><i></i>'+esc(String((res&&res.terminal)||row.terminal||'not solved').replace(/_/g,' '))+'</span>'}</td><td class="v">${fmt(b.result?.efficiency?.steps??row.steps)}</td><td class="v">${esc((b.run_id||'').slice(0,14))}/${esc(b.attempt)}</td></tr>`}).join('')}</tbody></table></div>`:emptyState()}</div>`;
+  v.innerHTML=html;
+  v.querySelectorAll('tr[data-k]').forEach(tr=>tr.addEventListener('click',async()=>{SEL=tr.dataset.k;TICK=0;ACTIVE_MEMBER=null;OPENED=null;await loadFull(SEL);show('play');render(true)}));
+  $('#f-files').addEventListener('change',e=>readFiles(e.target.files));
+  if(LOCAL&&STATE){const fe=$('#f-env'),ft=$('#f-task');const fill=()=>{const d=STATE.environments[fe.value]||{};const def=d.default_task||(d.tasks||['all'])[0];ft.innerHTML=(d.tasks||['all']).map(t=>`<option ${t===def?'selected':''}>${esc(t)}</option>`).join('')};fe.addEventListener('change',fill);fill();
+    const subjOn=id=>{const a=STATE.agents.find(x=>x.id===id);if(a)return a.connected;const h=STATE.hives.find(x=>x.id===id);return h?h.members.every(m=>STATE.agents.find(a=>a.id===m)?.connected):false};
+    const warn=()=>{const id=$('#f-subj').value;$('#f-msg').textContent=subjOn(id)?'':`${id} is offline. An episode waits for it to connect and ends as agent_timeout after ${fmt(STATE.protocol.step_timeout_s)} s if it never does.`};
+    ['f-subj','f-env','f-task','f-seeds','f-var','f-mem'].forEach(k=>{const el=$('#'+k);if(FORM[k]!=null&&[...(el.options||[])].every(o=>true))try{if(el.tagName!=='SELECT'||[...el.options].some(o=>o.value===FORM[k]))el.value=FORM[k]}catch(e){}el.addEventListener('input',()=>{FORM[k]=el.value;if(k==='f-subj')warn()});el.addEventListener('change',()=>{FORM[k]=el.value;if(k==='f-subj')warn()})});
+    fill();if(FORM['f-task'])ft.value=FORM['f-task'];warn();
+    $('#f-go').addEventListener('click',async()=>{const seeds=parseSeeds($('#f-seeds').value);const body={subject:$('#f-subj').value,env:fe.value,task:ft.value,seeds,variant:$('#f-var').value.trim(),memory_mode:$('#f-mem').value};
+      try{const r=await api('/api/episodes',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});$('#f-msg').textContent=`Queued ${r.queued.length} episode(s) for ${body.subject}.`}catch(e){$('#f-msg').textContent='Not queued: '+e.message}})}
+}
+const FORM={};
+function parseSeeds(t){const out=[];for(const p of t.split(',')){const q=p.trim();if(!q)continue;if(q.includes('-')){const [a,b]=q.split('-').map(Number);for(let i=a;i<=b;i++)out.push(i)}else out.push(Number(q))}return out.filter(n=>Number.isFinite(n))}
+
+/* ============================== sources ============================== */
+const OMEGA_AT='https://github.com/singnet/Omega/blob/ee0618a/';
+function srcLinks(html){
+  return html.replace(/\b((?:src|channels|providers|config)\/[\w.-]+\.(?:metta|py|conf)|scripts\/omega|docs\/reference-[\w.-]+\.md)/g,m=>`<a href="${OMEGA_AT}${m}" target="_blank" rel="noopener">${m}</a>`)
+    .replace(/\bsingnet\/Omega#(\d+)/g,(m,n)=>`<a href="https://github.com/singnet/Omega/pull/${n}" target="_blank" rel="noopener">${m}</a>`)
+    .replace(/\bpetta_lib_chromadb\b/g,'<a href="https://github.com/patham9/petta_lib_chromadb" target="_blank" rel="noopener">petta_lib_chromadb</a>')
+    .replace(/\(github\.com\/singnet\/Omega\)/g,'(<a href="https://github.com/singnet/Omega/tree/ee0618a" target="_blank" rel="noopener">github.com/singnet/Omega</a>)');
+}
+function renderSources(){
+  const v=$('#view-sources');const b=RUNS.get(SEL);const bb=b&&!b.stub?b:null;
+  const groups=[...new Set(FIELDS.map(f=>f.group))];
+  v.innerHTML=`<div class="vh"><h1>Sources</h1><span class="sub">Where every field in this console comes from, and whether the selected run carries it${bb?': '+esc(label(bb)):''}.</span></div>
+  ${groups.map(g=>`<div class="card scroll"><h2>${esc(g)}</h2><table class="t"><thead><tr><th>Field</th><th>Source</th><th>This run</th></tr></thead><tbody>${FIELDS.filter(f=>f.group===g).map(f=>{const s=status(f.id,bb);
+    return `<tr class="${s.ok?'':'off'}"><td>${esc(f.label)}</td><td>${srcLinks(esc(f.source||'—'))}</td><td>${f.absent||s.absent?'<span class="pill na">not in OmegaClaw</span>':s.ok?`<span class="pill ok"><i></i>${s.derived?'derived':'present'}</span>`:`<span class="pill na why" data-tip="${esc(s.reason)}">not in this run</span>`}${!s.ok?`<div class="sub" style="margin-top:4px">${esc(s.reason)}</div>`:''}</td></tr>`}).join('')}</tbody></table></div>`).join('')}
+  <div class="card"><h2>Validated against</h2><div class="sub">${srcLinks('OmegaClaw (github.com/singnet/Omega) at commit ee0618a, 25 September 2026. The open pull request singnet/Omega#358 moves the LLM to the tools API and will change the response log lines. Re-run the parser tests when it lands.')}${(LOCAL?STATE?.links:EMBED_META?.links)?.repository?` Field by field: <a href="${esc((LOCAL?STATE?.links:EMBED_META?.links).repository.replace(/\/$/,'')+'/blob/main/docs/OMEGACLAW.md')}" target="_blank" rel="noopener">docs/OMEGACLAW.md</a>.`:''}</div></div>`;
+}
+
+/* ============================== boot ============================== */
+function render(full){renderHeader();if(VIEW==='play')renderPlay();else if(VIEW==='compare')renderCompare();else if(VIEW==='progress')renderProgress();else if(VIEW==='runs')renderRuns();else if(VIEW==='sources')renderSources();if(full&&VIEW==='play')refreshSelection()}
+(async()=>{loadEmbedded();await detectLocal();if(!document.querySelector('.rail button[data-view="'+VIEW+'"]'))VIEW='play';show(VIEW);if(SEL)await loadFull(SEL);render(true)})();
+</script>

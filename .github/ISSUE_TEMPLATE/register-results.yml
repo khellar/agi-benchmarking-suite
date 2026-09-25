@@ -1,0 +1,77 @@
+name: Register results
+description: List a release made with omegaeval in the registry. Its numbers are recomputed from the bundle.
+title: "Register results: "
+labels: ["registry"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Make a release with `omegaeval release`, pack it with `omegaeval bundle`, and host the file at an https address, such as a GitHub release asset. The checks download the bundle, verify every checksum, and recompute the numbers. docs/REGISTRY.md explains every field.
+  - type: input
+    id: release
+    attributes:
+      label: Release name
+      description: The name given to omegaeval release; 1 to 64 lowercase letters, digits, '.', '-' or '_'.
+      placeholder: hle-oma-1-2026-10
+    validations:
+      required: true
+  - type: input
+    id: benchmark
+    attributes:
+      label: Benchmark
+      description: The id of the benchmark the release covers, registered or built in.
+      placeholder: hle
+    validations:
+      required: true
+  - type: input
+    id: agent
+    attributes:
+      label: Agent
+      description: The agent or hive id in the release.
+      placeholder: oma-1
+    validations:
+      required: true
+  - type: input
+    id: date
+    attributes:
+      label: Release date
+      placeholder: "2026-10-01"
+    validations:
+      required: true
+  - type: input
+    id: bundle
+    attributes:
+      label: Bundle URL
+      description: https address of the file omegaeval bundle wrote.
+      placeholder: https://github.com/you/your-repo/releases/download/v1/hle-oma-1-2026-10.tar.gz
+    validations:
+      required: true
+  - type: input
+    id: sha256
+    attributes:
+      label: Bundle sha256
+      description: The sha256 omegaeval bundle printed.
+    validations:
+      required: true
+  - type: input
+    id: maintainers
+    attributes:
+      label: Maintainers
+      description: GitHub handles, separated by commas. Include yourself.
+    validations:
+      required: true
+  - type: textarea
+    id: agent_description
+    attributes:
+      label: Agent description
+      description: What the agent is, such as its version, model and settings.
+  - type: input
+    id: judged_by
+    attributes:
+      label: Judged by
+      description: Who or what judged the answers, when a judge graded them.
+  - type: textarea
+    id: notes
+    attributes:
+      label: Notes
+      description: Anything a reader needs to interpret the results.

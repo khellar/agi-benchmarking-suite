@@ -1,0 +1,10 @@
+# The source distribution carries what its tests read: the docs, the examples and the registry.
+include CHANGELOG.md CONTRIBUTING.md SECURITY.md
+graft docs
+graft examples
+graft registry
+graft scripts
+graft website
+graft tests
+graft .github
+global-exclude __pycache__ *.py[cod] .DS_Store

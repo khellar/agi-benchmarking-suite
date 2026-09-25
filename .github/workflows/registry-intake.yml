@@ -1,0 +1,64 @@
+name: registry intake
+
+# Turns a registration issue into a pull request that adds the entry, or comments on the
+# issue with what to fix. The issue text is only ever read by the Python checker, never by
+# the shell: the shell sees ids that have already been validated.
+on:
+  issues:
+    types: [opened, edited]
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+
+concurrency:
+  group: registry-intake-${{ github.event.issue.number }}
+  cancel-in-progress: true
+
+jobs:
+  intake:
+    if: contains(github.event.issue.body, '### Benchmark id') || contains(github.event.issue.body, '### Bundle URL')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -e .
+      - name: Read the form and write the entry
+        run: python -m omegaeval.registry intake --event "$GITHUB_EVENT_PATH" --out "$RUNNER_TEMP/intake.json"
+      - name: Verify it, then open or update the pull request, or explain what to fix
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ISSUE: ${{ github.event.issue.number }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          get() { python -c "import json,sys; print(json.load(open(sys.argv[1])).get(sys.argv[2], ''))" "$RUNNER_TEMP/intake.json" "$1"; }
+          action=$(get action)
+          if [ "$action" = "comment" ]; then
+            gh issue comment "$ISSUE" --repo "$REPO" --body-file "$RUNNER_TEMP/intake.md"
+            exit 0
+          fi
+          [ "$action" = "pull-request" ] || exit 0
+          path=$(get path); branch=$(get branch); title=$(get title)
+          if ! python -m omegaeval.registry check --fetch "$path" > "$RUNNER_TEMP/check.txt" 2>&1; then
+            { echo "Thanks. The entry does not pass the checks yet; edit the issue and they run again:"; echo; echo '```'; cat "$RUNNER_TEMP/check.txt"; echo '```'; } > "$RUNNER_TEMP/comment.md"
+            gh issue comment "$ISSUE" --repo "$REPO" --body-file "$RUNNER_TEMP/comment.md"
+            exit 0
+          fi
+          get body > "$RUNNER_TEMP/pr.md"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout -B "$branch"
+          git add "$path"
+          git commit -m "$title"
+          git push --force origin "$branch"
+          if gh pr view "$branch" --repo "$REPO" > /dev/null 2>&1; then
+            gh issue comment "$ISSUE" --repo "$REPO" --body "The entry passes the checks, and its pull request is updated."
+          elif url=$(gh pr create --repo "$REPO" --head "$branch" --base main --title "$title" --body-file "$RUNNER_TEMP/pr.md"); then
+            gh issue comment "$ISSUE" --repo "$REPO" --body "The entry passes the checks. Pull request: $url"
+          else
+            gh issue comment "$ISSUE" --repo "$REPO" --body "The entry passes the checks and is on branch $branch. A maintainer can open its pull request: https://github.com/$REPO/compare/main...$branch?expand=1"
+          fi

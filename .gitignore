@@ -1,0 +1,19 @@
+# local configuration holds agent tokens: never commit it
+omegaeval.toml
+# run stores hold prompts and memory from real agents; publish them deliberately, through releases
+omegaeval-store/
+*.bundle.json
+omegaeval-export.json
+
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+.venv/
+venv/
+.pytest_cache/
+
+# the console demo built by the pages workflow
+site/
+runs/

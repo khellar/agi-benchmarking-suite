@@ -1,0 +1,23 @@
+name: registry
+
+on:
+  pull_request:
+    paths: ["registry/**", "omegaeval/registry.py"]
+  push:
+    branches: [main]
+    paths: ["registry/**"]
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -e .
+      - name: Check every entry, downloading and verifying result bundles
+        run: python -m omegaeval.registry check --fetch

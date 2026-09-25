@@ -1,0 +1,99 @@
+name: Register a benchmark
+description: Add a benchmark to the registry so anyone can load it with omegaeval add.
+title: "Register benchmark: "
+labels: ["registry"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Once this passes the checks, a pull request adds your benchmark to the registry, and a maintainer merges it. Problems come back as a comment; edit the issue to fix them. docs/REGISTRY.md explains every field.
+  - type: input
+    id: id
+    attributes:
+      label: Benchmark id
+      description: 1 to 40 lowercase letters, digits, - or _. It names the benchmark in run ids and commands.
+      placeholder: arc-agi-3
+    validations:
+      required: true
+  - type: input
+    id: label
+    attributes:
+      label: Label
+      description: Short display name, at most 24 characters.
+      placeholder: ARC-AGI-3
+    validations:
+      required: true
+  - type: input
+    id: name
+    attributes:
+      label: Full name
+      placeholder: ARC-AGI-3 interactive games
+    validations:
+      required: true
+  - type: dropdown
+    id: kind
+    attributes:
+      label: Shape
+      options:
+        - interactive
+        - qa
+        - memory
+    validations:
+      required: true
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: One or two sentences on what it measures, at most 400 characters.
+    validations:
+      required: true
+  - type: input
+    id: homepage
+    attributes:
+      label: Homepage
+      description: https address of the benchmark, its paper or its dataset.
+      placeholder: https://
+    validations:
+      required: true
+  - type: input
+    id: maintainers
+    attributes:
+      label: Maintainers
+      description: GitHub handles, separated by commas. Include yourself.
+    validations:
+      required: true
+  - type: textarea
+    id: config
+    attributes:
+      label: Config block
+      description: The omegaeval.toml block that loads it, one [environments.<id>] table and its options.
+      render: toml
+      placeholder: |
+        [environments.arc-agi-3]
+        adapter = "arc_omegaeval:ArcGames"
+    validations:
+      required: true
+  - type: dropdown
+    id: scoring
+    attributes:
+      label: Scoring
+      options:
+        - deterministic
+        - judge
+        - mixed
+  - type: input
+    id: install
+    attributes:
+      label: Install command
+      description: How to install the adapter, when it lives in a package.
+      placeholder: pip install arc-omegaeval
+  - type: input
+    id: license
+    attributes:
+      label: License
+      description: The license of the benchmark's data or code.
+  - type: input
+    id: tags
+    attributes:
+      label: Tags
+      description: Keywords, separated by commas.
