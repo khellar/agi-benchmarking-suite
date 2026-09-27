@@ -357,6 +357,7 @@ function ingest(obj,origin){
 }
 async function api(path,opts){const r=await fetch(path,opts);if(!r.ok)throw new Error((await r.json().catch(()=>({}))).error||r.statusText);return r.json()}
 async function detectLocal(){
+  if(EMBED_META?.harness){LOCAL=false;return}   /* an exported page is a snapshot: no harness to ask */
   try{STATE=await api('/api/state');LOCAL=true}catch(e){LOCAL=false}
   if(LOCAL){await refreshLocal(true);setInterval(()=>refreshLocal(false),2500)}
 }
@@ -544,6 +545,7 @@ function renderPlay(){
   const title=b.kind==='log-import'?`Log import · ${esc(id.subject)}`:`${esc(id.subject)} · ${esc(LABELS[id.env]||id.env)}/${esc(id.task)} · seed ${esc(id.seed)}`;
   const outcome=b.kind==='log-import'?'':oc.available===false?`<span class="pill na" data-tip="${esc(oc.reason)}">${esc(b.manifest.status)}</span>`:
     oc.void?`<span class="pill void" data-tip="${esc(oc.void_reason||'')}"><i></i>void · ${esc(oc.void_reason||'forbidden tool used')}</span>`:
+    oc.not_graded?`<span class="pill na" data-tip="${esc(oc.not_graded)}">not graded · ${esc(String(oc.terminal||b.manifest.status||'').replace(/_/g,' '))}</span>`:
     oc.needs_judge?`<span class="pill judge" data-tip="${esc(oc.judge_reason||F.judge.source)}"><i></i>held for a judge</span>`:
     oc.judged?`<span class="pill ${oc.success?'ok':'bad'}" data-tip="${esc(judgedTip(oc))}"><i></i>${oc.success?'correct':'wrong'} · judged by ${esc(oc.judged.by||'?')}</span>`:
     `<span class="pill ${oc.success?'ok':'bad'}"><i></i>${oc.success?(id.env&&b.manifest?.environment?.kind!=='interactive'?'correct':'solved'):(oc.terminal==='answered'?'wrong answer':esc(String(oc.terminal||'').replace(/_/g,' ')))} · ${fmt(res.efficiency?.steps)} step${res.efficiency?.steps===1?'':'s'}</span>`;
@@ -702,6 +704,7 @@ function gradeNote(b,metrics){const o=b.result?.outcome||{};return o.void?(o.voi
 function verdictPill(b){
   const o=b.result?.outcome||{};
   if(o.void)return `<span class="pill void" data-tip="${esc(o.void_reason||'')}"><i></i>void</span>`;
+  if(o.not_graded)return `<span class="pill na" data-tip="${esc(o.not_graded)}">not graded</span>`;
   if(o.needs_judge)return `<span class="pill judge" data-tip="${esc(o.judge_reason||'')}"><i></i>held for a judge</span>`;
   if(o.judged)return `<span class="pill ${o.success?'ok':'bad'}" data-tip="${esc(judgedTip(o))}"><i></i>${o.success?'correct':'wrong'} · judged</span>`;
   if(o.success===true)return '<span class="pill ok"><i></i>correct</span>';
