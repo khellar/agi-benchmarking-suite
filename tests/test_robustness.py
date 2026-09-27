@@ -45,3 +45,17 @@ def test_init_writes_a_config_that_loads(tmp_path):
     assert main(["init", "--dir", str(tmp_path)]) == 1                # never overwrites
     example = Path(__file__).resolve().parents[1] / "examples" / "omegaeval.example.toml"
     assert not load(example).unknown
+
+
+def test_a_log_tap_whose_thread_starts_late_still_reads_the_whole_episode(tmp_path):
+    from omegaeval.sources import LogTap
+    log = tmp_path / "omega.log"
+    log.write_text("2026-09-27 10:00:00 | INFO     | loop | before the episode\n")
+    tap = LogTap("a", {"file": str(log)}, tmp_path / "out")
+    with open(log, "a", encoding="utf-8") as fh:      # the agent writes before the tap's thread has run
+        fh.write("2026-09-27 10:00:01 | INFO     | loop | (HUMAN-MSG: [omegaeval ep=abc1 t=0] hello)\n")
+    tap.start()
+    tap.stop(grace=0.3)
+    raw = (tmp_path / "out" / "omega.log").read_text()
+    assert "before the episode" not in raw and "HUMAN-MSG" in raw
+    assert tap.has_read("abc1", 0)

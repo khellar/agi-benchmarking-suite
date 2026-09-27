@@ -13,7 +13,6 @@ from __future__ import annotations
 
 import hashlib
 import json
-import os
 import sqlite3
 import subprocess
 import threading
@@ -117,6 +116,12 @@ class LogTap(threading.Thread):
         self.meta_path = out_dir / "trace-meta.json"
         self.builder = TraceBuilder()
         self.started = datetime.now(timezone.utc)
+        self._file_start = 0                    # where this episode begins in a log file, fixed before any message
+        if "file" in self.spec:
+            try:
+                self._file_start = Path(self.spec["file"]).stat().st_size
+            except OSError:
+                pass
         self._halt = threading.Event()
         self._proc: subprocess.Popen | None = None
         self.error: str | None = None
@@ -176,31 +181,33 @@ class LogTap(threading.Thread):
     def _follow_file(self, path: Path) -> None:
         while not path.exists() and not self._halt.is_set():
             time.sleep(0.5)
-        fh = open(path, "r", encoding="utf-8", errors="replace")
-        fh.seek(0, os.SEEK_END)
-        pos = fh.tell()
-        buf = ""
+        fh = open(path, "rb")                  # bytes, so the offset taken at construction is exact
+        pos = self._file_start if path.stat().st_size >= self._file_start else 0   # rotated since: start over
+        fh.seek(pos)
+        buf = b""
         while not self._halt.is_set():
             chunk = fh.readline()
             if chunk:
                 buf += chunk
-                if buf.endswith("\n"):
-                    self._line(buf)
-                    buf = ""
+                if buf.endswith(b"\n"):
+                    self._line(buf.decode("utf-8", errors="replace"))
+                    buf = b""
                 pos = fh.tell()
                 continue
             try:
                 if path.stat().st_size < pos:     # truncated or rotated
                     fh.close()
-                    fh = open(path, "r", encoding="utf-8", errors="replace")
+                    fh = open(path, "rb")
                     pos = 0
+                    buf = b""
             except FileNotFoundError:
                 pass
             time.sleep(0.2)
         # read whatever arrived during the grace period
-        for chunk in fh:
-            self._line(chunk)
+        rest = buf + fh.read()
         fh.close()
+        for line in rest.decode("utf-8", errors="replace").splitlines(keepends=True):
+            self._line(line)
 
     # -- recording ----------------------------------------------------------------------
     def _line(self, line: str) -> None:
